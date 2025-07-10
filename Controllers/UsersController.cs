@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using ChattingApplicationProject.Controllers.Interfaces;
+using ChattingApplicationProject.Interfaces;
 using ChattingApplicationProject.Models;
 using Microsoft.AspNetCore.Mvc;
 
