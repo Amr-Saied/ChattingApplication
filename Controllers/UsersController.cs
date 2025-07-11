@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using ChattingApplicationProject.Interfaces;
 using ChattingApplicationProject.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ChattingApplicationProject.Controllers
@@ -17,12 +18,14 @@ namespace ChattingApplicationProject.Controllers
             _userService = userService;
         }
 
+        [AllowAnonymous]
         [HttpGet("GetUsers")]
         public async Task<ActionResult<IEnumerable<AppUser>>> GetUsersAsync()
         {
             return Ok(await _userService.GetUsers());
         }
 
+        [Authorize]
         [HttpGet("GetUserById/{id}")]
         public async Task<ActionResult<AppUser>> GetUserById(int id)
         {
