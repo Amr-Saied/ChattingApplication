@@ -1,9 +1,5 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading.Tasks;
 using ChattingApplicationProject.DTO;
 using ChattingApplicationProject.Interfaces;
 using ChattingApplicationProject.Models;
@@ -16,14 +12,16 @@ namespace ChattingApplicationProject.Controllers
     public class AccountController : ControllerBase
     {
         private readonly IUserService _userService;
+        private readonly ITokenService _tokenService;
 
-        public AccountController(IUserService userService)
+        public AccountController(IUserService userService, ITokenService tokenService)
         {
             _userService = userService;
+            _tokenService = tokenService;
         }
 
         [HttpPost("register")]
-        public async Task<ActionResult<AppUser>> Register(RegisterDTO registerDto)
+        public async Task<ActionResult<UserDTO>> Register(RegisterDTO registerDto)
         {
             if (await _userService.UserExists(registerDto.Username))
                 return BadRequest("Username is taken");
@@ -39,11 +37,15 @@ namespace ChattingApplicationProject.Controllers
 
             await _userService.AddUser(user);
 
-            return Ok(user);
+            return new UserDTO
+            {
+                Username = user.UserName,
+                Token = _tokenService.CreateToken(user)
+            };
         }
 
         [HttpPost("login")]
-        public async Task<ActionResult<AppUser>> Login(LoginDTO loginDto)
+        public async Task<ActionResult<UserDTO>> Login(LoginDTO loginDto)
         {
             var user = await _userService.GetUserByUsername(loginDto.Username);
             if (user == null)
@@ -58,7 +60,11 @@ namespace ChattingApplicationProject.Controllers
                     return Unauthorized("Invalid password");
             }
 
-            return Ok("User logged in successfully");
+            return new UserDTO
+            {
+                Username = user.UserName,
+                Token = _tokenService.CreateToken(user)
+            };
         }
     }
 }

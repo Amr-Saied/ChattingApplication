@@ -44,6 +44,5 @@ namespace ChattingApplicationProject.Services
         {
             return await _context.Users.SingleOrDefaultAsync(x => x.UserName == username.ToLower());
         }
-
     }
 }
