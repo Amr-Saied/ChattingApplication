@@ -80,6 +80,9 @@ builder.Services.AddDbContext<DataContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
 );
 
+// Add Authorization
+builder.Services.AddAuthorization();
+
 var app = builder.Build();
 
 // Enable CORS

@@ -18,7 +18,7 @@ namespace ChattingApplicationProject.Controllers
             _userService = userService;
         }
 
-        [AllowAnonymous]
+        [Authorize(Roles = "Admin")]
         [HttpGet("GetUsers")]
         public async Task<ActionResult<IEnumerable<AppUser>>> GetUsersAsync()
         {

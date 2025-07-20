@@ -18,6 +18,7 @@ namespace ChattingApplicationProject.Data
         {
             modelBuilder.Entity<AppUser>().HasKey(u => u.Id);
             modelBuilder.Entity<AppUser>().Property(u => u.UserName).IsRequired().HasMaxLength(255);
+            modelBuilder.Entity<AppUser>().Property(u => u.Role).IsRequired().HasMaxLength(255);
         }
     }
 }
