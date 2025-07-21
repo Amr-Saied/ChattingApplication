@@ -1,6 +1,7 @@
 using System.Text;
 using ChattingApplicationProject.Data;
 using ChattingApplicationProject.Interfaces;
+using ChattingApplicationProject.Middlwares;
 using ChattingApplicationProject.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -94,6 +95,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+// Add Exception Handling Middleware
+app.UseMiddleware<ExceptionHandlingMiddlware>();
 
 app.UseWebSockets();
 
