@@ -86,6 +86,13 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
+// // Seed data
+// using (var scope = app.Services.CreateScope())
+// {
+//     var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+//     await Seeder.SeedUsers(context);
+// }
+
 // Enable CORS
 app.UseCors("DevelopmentCorsPolicy");
 
