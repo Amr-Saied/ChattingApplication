@@ -10,6 +10,7 @@ namespace ChattingApplicationProject.Controllers
 {
     [ApiController]
     [Route("[controller]")]
+    [Authorize(Roles = "Admin")]
     public class BuggyController : ControllerBase
     {
         [HttpGet("auth")]

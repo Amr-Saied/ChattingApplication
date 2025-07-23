@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace ChattingApplicationProject.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("[controller]")]
     public class AccountController : ControllerBase
     {
         private readonly IUserService _userService;
@@ -20,7 +20,7 @@ namespace ChattingApplicationProject.Controllers
             _tokenService = tokenService;
         }
 
-        [HttpPost("register")]
+        [HttpPost("Register")]
         public async Task<ActionResult<UserDTO>> Register(RegisterDTO registerDto)
         {
             if (await _userService.UserExists(registerDto.Username))
@@ -45,7 +45,7 @@ namespace ChattingApplicationProject.Controllers
             };
         }
 
-        [HttpPost("login")]
+        [HttpPost("Login")]
         public async Task<ActionResult<UserDTO>> Login(LoginDTO loginDto)
         {
             var user = await _userService.GetUserByUsername(loginDto.Username);
