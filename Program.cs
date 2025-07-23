@@ -1,6 +1,7 @@
 using System.Text;
 using ChattingApplicationProject.Data;
 using ChattingApplicationProject.Interfaces;
+using ChattingApplicationProject.Middlwares;
 using ChattingApplicationProject.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -10,7 +11,17 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
-builder.Services.AddControllers();
+builder
+    .Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.DefaultIgnoreCondition = System
+            .Text
+            .Json
+            .Serialization
+            .JsonIgnoreCondition
+            .WhenWritingNull;
+    });
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -44,6 +55,9 @@ builder.Services.AddSwaggerGen(c =>
 });
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddAutoMapper(
+    typeof(ChattingApplicationProject.Helpers.AutoMapperProfiles).Assembly
+);
 
 builder
     .Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -80,7 +94,17 @@ builder.Services.AddDbContext<DataContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
 );
 
+// Add Authorization
+builder.Services.AddAuthorization();
+
 var app = builder.Build();
+
+// // Seed data
+// using (var scope = app.Services.CreateScope())
+// {
+//     var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+//     await Seeder.SeedUsers(context);
+// }
 
 // Enable CORS
 app.UseCors("DevelopmentCorsPolicy");
@@ -91,6 +115,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+// Add Exception Handling Middleware
+app.UseMiddleware<ExceptionHandlingMiddlware>();
 
 app.UseWebSockets();
 

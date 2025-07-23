@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using AutoMapper;
+using ChattingApplicationProject.DTO;
 using ChattingApplicationProject.Interfaces;
 using ChattingApplicationProject.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -9,6 +11,7 @@ namespace ChattingApplicationProject.Controllers
 {
     [ApiController]
     [Route("[controller]")]
+    [Authorize]
     public class UsersController : ControllerBase
     {
         private readonly IUserService _userService;
@@ -18,18 +21,22 @@ namespace ChattingApplicationProject.Controllers
             _userService = userService;
         }
 
-        [AllowAnonymous]
         [HttpGet("GetUsers")]
-        public async Task<ActionResult<IEnumerable<AppUser>>> GetUsersAsync()
+        public async Task<ActionResult<IEnumerable<MemeberDTO>>> GetUsersAsync()
         {
-            return Ok(await _userService.GetUsers());
+            return Ok(await _userService.GetUsersDTO());
         }
 
-        [Authorize]
         [HttpGet("GetUserById/{id}")]
-        public async Task<ActionResult<AppUser>> GetUserById(int id)
+        public async Task<ActionResult<MemeberDTO>> GetUserById(int id)
         {
-            return Ok(await _userService.GetUserById(id));
+            return Ok(await _userService.GetUserByIdDTO(id));
+        }
+
+        [HttpGet("GetUserByUsername/{username}")]
+        public async Task<ActionResult<MemeberDTO>> GetUserByUsername(string username)
+        {
+            return Ok(await _userService.GetUserByUsernameDTO(username));
         }
     }
 }
