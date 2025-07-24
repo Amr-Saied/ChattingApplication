@@ -123,6 +123,9 @@ app.UseWebSockets();
 
 app.UseHttpsRedirection();
 
+// Serve static files from wwwroot
+app.UseStaticFiles();
+
 app.UseAuthorization();
 
 app.Use(

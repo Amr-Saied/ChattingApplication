@@ -73,5 +73,37 @@ namespace ChattingApplicationProject.Services
                 .SingleOrDefaultAsync(x => x.UserName == username.ToLower());
             return _mapper.Map<MemeberDTO>(user);
         }
+
+        public async Task<MemeberDTO> UpdateUserDTO(int id, MemeberDTO user)
+        {
+            var userToUpdate = await _context.Users.FindAsync(id);
+            _mapper.Map(user, userToUpdate);
+            // If PhotoUrl is set, update the main photo in Photos
+            if (!string.IsNullOrEmpty(user.PhotoUrl) && userToUpdate.Photos != null)
+            {
+                var mainPhoto = userToUpdate.Photos.FirstOrDefault(p => p.IsMain);
+                if (mainPhoto != null)
+                {
+                    mainPhoto.Url = user.PhotoUrl;
+                }
+                else if (userToUpdate.Photos.Count > 0)
+                {
+                    // If no main photo, set the first as main and update its URL
+                    var firstPhoto = userToUpdate.Photos.First();
+                    firstPhoto.Url = user.PhotoUrl;
+                    firstPhoto.IsMain = true;
+                }
+                else
+                {
+                    // If no photos, add a new main photo
+                    userToUpdate.Photos = new List<Photo>
+                    {
+                        new Photo { Url = user.PhotoUrl, IsMain = true }
+                    };
+                }
+            }
+            await _context.SaveChangesAsync();
+            return _mapper.Map<MemeberDTO>(userToUpdate);
+        }
     }
 }
