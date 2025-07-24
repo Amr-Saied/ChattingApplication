@@ -19,5 +19,6 @@ namespace ChattingApplicationProject.Interfaces
         Task<MemeberDTO> GetUserByIdDTO(int id);
         Task<MemeberDTO> GetUserByUsernameDTO(string username);
         Task<MemeberDTO> UpdateUserDTO(int id, MemeberDTO user);
+        Task<bool> AddPhotoToGallery(int userId, PhotoDTO photo);
     }
 }

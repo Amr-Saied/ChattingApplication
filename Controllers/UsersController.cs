@@ -66,5 +66,14 @@ namespace ChattingApplicationProject.Controllers
             var url = $"{Request.Scheme}://{Request.Host}/uploads/{fileName}";
             return Ok(new { url });
         }
+
+        [HttpPost("AddPhoto/{userId}")]
+        public async Task<IActionResult> AddPhoto(int userId, [FromBody] PhotoDTO photo)
+        {
+            var result = await _userService.AddPhotoToGallery(userId, photo);
+            if (!result)
+                return BadRequest("Could not add photo to gallery.");
+            return Ok(new { success = true });
+        }
     }
 }

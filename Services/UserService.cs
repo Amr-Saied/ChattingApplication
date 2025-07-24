@@ -105,5 +105,19 @@ namespace ChattingApplicationProject.Services
             await _context.SaveChangesAsync();
             return _mapper.Map<MemeberDTO>(userToUpdate);
         }
+
+        public async Task<bool> AddPhotoToGallery(int userId, PhotoDTO photo)
+        {
+            var user = await _context
+                .Users.Include(u => u.Photos)
+                .FirstOrDefaultAsync(u => u.Id == userId);
+            if (user == null)
+                return false;
+            var newPhoto = new Photo { Url = photo.Url, IsMain = false };
+            user.Photos ??= new List<Photo>();
+            user.Photos.Add(newPhoto);
+            await _context.SaveChangesAsync();
+            return true;
+        }
     }
 }
