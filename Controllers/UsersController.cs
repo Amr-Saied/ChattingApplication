@@ -16,11 +16,17 @@ namespace ChattingApplicationProject.Controllers
     {
         private readonly IUserService _userService;
         private readonly IWebHostEnvironment _env;
+        private readonly IPhotoService _photoService;
 
-        public UsersController(IUserService userService, IWebHostEnvironment env)
+        public UsersController(
+            IUserService userService,
+            IWebHostEnvironment env,
+            IPhotoService photoService
+        )
         {
             _userService = userService;
             _env = env;
+            _photoService = photoService;
         }
 
         [HttpGet("GetUsers")]
@@ -53,17 +59,10 @@ namespace ChattingApplicationProject.Controllers
             if (file == null || file.Length == 0)
                 return BadRequest("No file uploaded.");
 
-            var uploadsFolder = Path.Combine(_env.WebRootPath, "uploads");
-            Directory.CreateDirectory(uploadsFolder);
-            var fileName = Guid.NewGuid() + Path.GetExtension(file.FileName);
-            var filePath = Path.Combine(uploadsFolder, fileName);
+            var url = await _photoService.UploadPhotoAsync(file);
+            if (string.IsNullOrEmpty(url))
+                return BadRequest("Photo upload failed.");
 
-            using (var stream = new FileStream(filePath, FileMode.Create))
-            {
-                await file.CopyToAsync(stream);
-            }
-
-            var url = $"{Request.Scheme}://{Request.Host}/uploads/{fileName}";
             return Ok(new { url });
         }
 
@@ -73,6 +72,15 @@ namespace ChattingApplicationProject.Controllers
             var result = await _userService.AddPhotoToGallery(userId, photo);
             if (!result)
                 return BadRequest("Could not add photo to gallery.");
+            return Ok(new { success = true });
+        }
+
+        [HttpDelete("DeletePhoto/{userId}/{photoId}")]
+        public async Task<IActionResult> DeletePhoto(int userId, int photoId)
+        {
+            var result = await _userService.DeletePhotoFromGallery(userId, photoId);
+            if (!result)
+                return BadRequest("Could not delete photo from gallery.");
             return Ok(new { success = true });
         }
     }

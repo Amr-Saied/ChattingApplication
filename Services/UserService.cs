@@ -119,5 +119,20 @@ namespace ChattingApplicationProject.Services
             await _context.SaveChangesAsync();
             return true;
         }
+
+        public async Task<bool> DeletePhotoFromGallery(int userId, int photoId)
+        {
+            var user = await _context
+                .Users.Include(u => u.Photos)
+                .FirstOrDefaultAsync(u => u.Id == userId);
+            if (user == null || user.Photos == null)
+                return false;
+            var photo = user.Photos.FirstOrDefault(p => p.Id == photoId);
+            if (photo == null)
+                return false;
+            _context.Photos.Remove(photo);
+            await _context.SaveChangesAsync();
+            return true;
+        }
     }
 }

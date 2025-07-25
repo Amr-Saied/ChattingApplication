@@ -1,4 +1,5 @@
 using System.Text;
+using ChattingApplicationProject;
 using ChattingApplicationProject.Data;
 using ChattingApplicationProject.Interfaces;
 using ChattingApplicationProject.Middlwares;
@@ -6,7 +7,7 @@ using ChattingApplicationProject.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-
+using ChattingApplicationProject;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -55,6 +56,7 @@ builder.Services.AddSwaggerGen(c =>
 });
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<IPhotoService, PhotoService>();
 builder.Services.AddAutoMapper(
     typeof(ChattingApplicationProject.Helpers.AutoMapperProfiles).Assembly
 );
@@ -96,6 +98,10 @@ builder.Services.AddDbContext<DataContext>(options =>
 
 // Add Authorization
 builder.Services.AddAuthorization();
+
+builder.Services.Configure<CloudinaryOptions>(
+    builder.Configuration.GetSection("CloudinarySettings")
+);
 
 var app = builder.Build();
 
