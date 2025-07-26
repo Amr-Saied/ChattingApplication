@@ -1,5 +1,6 @@
 using System.Text;
 using ChattingApplicationProject;
+using ChattingApplicationProject;
 using ChattingApplicationProject.Data;
 using ChattingApplicationProject.Interfaces;
 using ChattingApplicationProject.Middlwares;
@@ -7,7 +8,7 @@ using ChattingApplicationProject.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using ChattingApplicationProject;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.

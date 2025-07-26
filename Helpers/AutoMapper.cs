@@ -26,6 +26,13 @@ namespace ChattingApplicationProject.Helpers
             CreateMap<Photo, PhotoDTO>();
             CreateMap<PhotoDTO, Photo>();
             CreateMap<MemeberDTO, AppUser>();
+
+            // Add mapping from RegisterDTO to AppUser
+            CreateMap<RegisterDTO, AppUser>()
+                .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.Username.ToLower()))
+                .ForMember(dest => dest.Created, opt => opt.MapFrom(src => DateTime.Now))
+                .ForMember(dest => dest.LastActive, opt => opt.MapFrom(src => DateTime.Now))
+                .ForMember(dest => dest.Role, opt => opt.MapFrom(src => "User"));
         }
     }
 }

@@ -1,7 +1,6 @@
-
+using ChattingApplicationProject.Interfaces;
 using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
-using ChattingApplicationProject.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 
