@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using AutoMapper;
 using ChattingApplicationProject.DTO;
 using ChattingApplicationProject.Interfaces;
 using ChattingApplicationProject.Models;
@@ -13,11 +14,17 @@ namespace ChattingApplicationProject.Controllers
     {
         private readonly IUserService _userService;
         private readonly ITokenService _tokenService;
+        private readonly IMapper _mapper;
 
-        public AccountController(IUserService userService, ITokenService tokenService)
+        public AccountController(
+            IUserService userService,
+            ITokenService tokenService,
+            IMapper mapper
+        )
         {
             _userService = userService;
             _tokenService = tokenService;
+            _mapper = mapper;
         }
 
         [HttpPost("Register")]
@@ -28,13 +35,12 @@ namespace ChattingApplicationProject.Controllers
 
             using var hmac = new HMACSHA512();
 
-            var user = new AppUser
-            {
-                UserName = registerDto.Username.ToLower(),
-                PasswordHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(registerDto.Password)),
-                PasswordSalt = hmac.Key,
-                Role = "User"
-            };
+            // Use AutoMapper to map RegisterDTO to AppUser
+            var user = _mapper.Map<AppUser>(registerDto);
+
+            // Set password hash and salt
+            user.PasswordHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(registerDto.Password));
+            user.PasswordSalt = hmac.Key;
 
             await _userService.AddUser(user);
 

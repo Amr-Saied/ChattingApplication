@@ -1,4 +1,6 @@
 using System.Text;
+using ChattingApplicationProject;
+using ChattingApplicationProject;
 using ChattingApplicationProject.Data;
 using ChattingApplicationProject.Interfaces;
 using ChattingApplicationProject.Middlwares;
@@ -55,6 +57,7 @@ builder.Services.AddSwaggerGen(c =>
 });
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<IPhotoService, PhotoService>();
 builder.Services.AddAutoMapper(
     typeof(ChattingApplicationProject.Helpers.AutoMapperProfiles).Assembly
 );
@@ -97,6 +100,10 @@ builder.Services.AddDbContext<DataContext>(options =>
 // Add Authorization
 builder.Services.AddAuthorization();
 
+builder.Services.Configure<CloudinaryOptions>(
+    builder.Configuration.GetSection("CloudinarySettings")
+);
+
 var app = builder.Build();
 
 // // Seed data
@@ -122,6 +129,9 @@ app.UseMiddleware<ExceptionHandlingMiddlware>();
 app.UseWebSockets();
 
 app.UseHttpsRedirection();
+
+// Serve static files from wwwroot
+app.UseStaticFiles();
 
 app.UseAuthorization();
 

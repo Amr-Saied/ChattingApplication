@@ -29,3 +29,9 @@ artifacts/
 
 # VS Code
 .vscode/
+
+#env file
+.env
+
+#uploads folder
+uploads/

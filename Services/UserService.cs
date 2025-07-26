@@ -73,5 +73,66 @@ namespace ChattingApplicationProject.Services
                 .SingleOrDefaultAsync(x => x.UserName == username.ToLower());
             return _mapper.Map<MemeberDTO>(user);
         }
+
+        public async Task<MemeberDTO> UpdateUserDTO(int id, MemeberDTO user)
+        {
+            var userToUpdate = await _context.Users.FindAsync(id);
+            _mapper.Map(user, userToUpdate);
+            // If PhotoUrl is set, update the main photo in Photos
+            if (!string.IsNullOrEmpty(user.PhotoUrl) && userToUpdate.Photos != null)
+            {
+                var mainPhoto = userToUpdate.Photos.FirstOrDefault(p => p.IsMain);
+                if (mainPhoto != null)
+                {
+                    mainPhoto.Url = user.PhotoUrl;
+                }
+                else if (userToUpdate.Photos.Count > 0)
+                {
+                    // If no main photo, set the first as main and update its URL
+                    var firstPhoto = userToUpdate.Photos.First();
+                    firstPhoto.Url = user.PhotoUrl;
+                    firstPhoto.IsMain = true;
+                }
+                else
+                {
+                    // If no photos, add a new main photo
+                    userToUpdate.Photos = new List<Photo>
+                    {
+                        new Photo { Url = user.PhotoUrl, IsMain = true }
+                    };
+                }
+            }
+            await _context.SaveChangesAsync();
+            return _mapper.Map<MemeberDTO>(userToUpdate);
+        }
+
+        public async Task<bool> AddPhotoToGallery(int userId, PhotoDTO photo)
+        {
+            var user = await _context
+                .Users.Include(u => u.Photos)
+                .FirstOrDefaultAsync(u => u.Id == userId);
+            if (user == null)
+                return false;
+            var newPhoto = new Photo { Url = photo.Url, IsMain = false };
+            user.Photos ??= new List<Photo>();
+            user.Photos.Add(newPhoto);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> DeletePhotoFromGallery(int userId, int photoId)
+        {
+            var user = await _context
+                .Users.Include(u => u.Photos)
+                .FirstOrDefaultAsync(u => u.Id == userId);
+            if (user == null || user.Photos == null)
+                return false;
+            var photo = user.Photos.FirstOrDefault(p => p.Id == photoId);
+            if (photo == null)
+                return false;
+            _context.Photos.Remove(photo);
+            await _context.SaveChangesAsync();
+            return true;
+        }
     }
 }
