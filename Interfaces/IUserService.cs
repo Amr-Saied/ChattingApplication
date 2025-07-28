@@ -20,5 +20,7 @@ namespace ChattingApplicationProject.Interfaces
         Task<bool> DeletePhotoFromGallery(int userId, int photoId);
         Task<PagedResult<MemeberDTO>> GetUsersPagedAsync(PaginationParams paginationParams);
         Task<IEnumerable<MemeberDTO>> SearchUsersAsync(string searchTerm);
+        Task<bool> UpdateUserLastActive(AppUser user);
+        string GetLastActiveStatus(DateTime lastActive);
     }
 }

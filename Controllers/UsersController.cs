@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using AutoMapper;
 using ChattingApplicationProject.DTO;
+using ChattingApplicationProject.Helpers;
 using ChattingApplicationProject.Interfaces;
 using ChattingApplicationProject.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -98,6 +99,17 @@ namespace ChattingApplicationProject.Controllers
             if (!result)
                 return BadRequest("Could not delete photo from gallery.");
             return Ok(new { success = true });
+        }
+
+        [HttpGet("GetLastActiveStatus/{userId}")]
+        public async Task<ActionResult<string>> GetLastActiveStatus(int userId)
+        {
+            var user = await _userService.GetUserByIdDTO(userId);
+            if (user == null)
+                return NotFound("User not found.");
+            
+            var lastActiveStatus = _userService.GetLastActiveStatus(user.LastActive);
+            return Ok(new { lastActiveStatus });
         }
     }
 }

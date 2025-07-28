@@ -130,6 +130,8 @@ namespace ChattingApplicationProject.Services
         )
         {
             var query = _context.Users.Include(u => u.Photos).AsQueryable();
+            query = query.Where(u => u.Role != "Admin"); // Filter out Admin users
+            query = query.OrderByDescending(u => u.Created);
 
             var totalCount = await query.CountAsync();
             var totalPages = (int)Math.Ceiling(totalCount / (double)paginationParams.PageSize);
@@ -163,9 +165,66 @@ namespace ChattingApplicationProject.Services
                     || u.KnownAs.ToLower().Contains(searchTerm.ToLower())
                     || u.City.ToLower().Contains(searchTerm.ToLower())
                 )
+                .Where(u => u.Role != "Admin") // Filter out Admin users
+                .OrderByDescending(u => u.Created)
                 .ToListAsync();
 
             return _mapper.Map<IEnumerable<MemeberDTO>>(users);
+        }
+
+        public async Task<bool> UpdateUserLastActive(AppUser user)
+        {
+            try
+            {
+                var userToUpdate = await _context.Users.FindAsync(user.Id);
+                if (userToUpdate != null)
+                {
+                    userToUpdate.LastActive = user.LastActive;
+                    await _context.SaveChangesAsync();
+                    return true;
+                }
+                return false;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public string GetLastActiveStatus(DateTime lastActive)
+        {
+            var timeSpan = DateTime.Now - lastActive;
+            
+            if (timeSpan.TotalMinutes < 60)
+            {
+                var minutes = (int)timeSpan.TotalMinutes;
+                return minutes <= 1 ? "1 minute ago" : $"{minutes} minutes ago";
+            }
+            else if (timeSpan.TotalHours < 24)
+            {
+                var hours = (int)timeSpan.TotalHours;
+                return hours == 1 ? "1 hour ago" : $"{hours} hours ago";
+            }
+            else if (timeSpan.TotalDays < 7)
+            {
+                var days = (int)timeSpan.TotalDays;
+                return days == 1 ? "1 day ago" : $"{days} days ago";
+            }
+            else if (timeSpan.TotalDays < 30)
+            {
+                var weeks = (int)(timeSpan.TotalDays / 7);
+                return weeks == 1 ? "1 week ago" : $"{weeks} weeks ago";
+            }
+            else if (timeSpan.TotalDays < 365)
+            {
+                var months = (int)(timeSpan.TotalDays / 30);
+                return months == 1 ? "1 month ago" : $"{months} months ago";
+            }
+            else
+            {
+                var years = (int)(timeSpan.TotalDays / 365);
+                return years == 1 ? "1 year ago" : $"{years} years ago";
+            }
         }
     }
 }

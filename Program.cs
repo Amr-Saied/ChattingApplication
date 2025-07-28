@@ -2,6 +2,7 @@ using System.Text;
 using ChattingApplicationProject;
 using ChattingApplicationProject;
 using ChattingApplicationProject.Data;
+using ChattingApplicationProject.Helpers;
 using ChattingApplicationProject.Interfaces;
 using ChattingApplicationProject.Middlwares;
 using ChattingApplicationProject.Services;
@@ -14,7 +15,11 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 
 builder
-    .Services.AddControllers()
+    .Services.AddControllers(options =>
+    {
+        // Add global action filter for all controllers
+        options.Filters.Add<LogUserActivityFilter>();
+    })
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.DefaultIgnoreCondition = System
