@@ -35,6 +35,22 @@ namespace ChattingApplicationProject.Controllers
             return Ok(await _userService.GetUsersDTO());
         }
 
+        [HttpGet("GetUsersPaged")]
+        public async Task<ActionResult<PagedResult<MemeberDTO>>> GetUsersPagedAsync(
+            [FromQuery] PaginationParams paginationParams
+        )
+        {
+            return Ok(await _userService.GetUsersPagedAsync(paginationParams));
+        }
+
+        [HttpGet("SearchUsers")]
+        public async Task<ActionResult<IEnumerable<MemeberDTO>>> SearchUsersAsync(
+            [FromQuery] string searchTerm
+        )
+        {
+            return Ok(await _userService.SearchUsersAsync(searchTerm));
+        }
+
         [HttpGet("GetUserById/{id}")]
         public async Task<ActionResult<MemeberDTO>> GetUserById(int id)
         {

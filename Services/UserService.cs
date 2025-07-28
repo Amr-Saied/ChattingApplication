@@ -22,16 +22,6 @@ namespace ChattingApplicationProject.Services
             _mapper = mapper;
         }
 
-        public async Task<IEnumerable<AppUser>> GetUsers()
-        {
-            return await _context.Users.Include(u => u.Photos).ToListAsync();
-        }
-
-        public async Task<AppUser> GetUserById(int id)
-        {
-            return await _context.Users.Include(u => u.Photos).FirstOrDefaultAsync(x => x.Id == id);
-        }
-
         public async Task<bool> UserExists(string username)
         {
             return await _context.Users.AnyAsync(x => x.UserName == username.ToLower());
@@ -42,13 +32,6 @@ namespace ChattingApplicationProject.Services
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
             return user;
-        }
-
-        public async Task<AppUser> GetUserByUsername(string username)
-        {
-            return await _context
-                .Users.Include(u => u.Photos)
-                .SingleOrDefaultAsync(x => x.UserName == username.ToLower());
         }
 
         // New DTO methods
@@ -64,6 +47,13 @@ namespace ChattingApplicationProject.Services
                 .Users.Include(u => u.Photos)
                 .FirstOrDefaultAsync(x => x.Id == id);
             return _mapper.Map<MemeberDTO>(user);
+        }
+
+        public async Task<AppUser> GetUserByUsername(string username)
+        {
+            return await _context
+                .Users.Include(u => u.Photos)
+                .SingleOrDefaultAsync(x => x.UserName == username.ToLower());
         }
 
         public async Task<MemeberDTO> GetUserByUsernameDTO(string username)
@@ -133,6 +123,49 @@ namespace ChattingApplicationProject.Services
             _context.Photos.Remove(photo);
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        public async Task<PagedResult<MemeberDTO>> GetUsersPagedAsync(
+            PaginationParams paginationParams
+        )
+        {
+            var query = _context.Users.Include(u => u.Photos).AsQueryable();
+
+            var totalCount = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling(totalCount / (double)paginationParams.PageSize);
+
+            var users = await query
+                .Skip((paginationParams.PageNumber - 1) * paginationParams.PageSize)
+                .Take(paginationParams.PageSize)
+                .ToListAsync();
+
+            var userDtos = _mapper.Map<List<MemeberDTO>>(users);
+
+            return new PagedResult<MemeberDTO>
+            {
+                Items = userDtos,
+                TotalCount = totalCount,
+                PageNumber = paginationParams.PageNumber,
+                PageSize = paginationParams.PageSize,
+                TotalPages = totalPages
+            };
+        }
+
+        public async Task<IEnumerable<MemeberDTO>> SearchUsersAsync(string searchTerm)
+        {
+            if (string.IsNullOrWhiteSpace(searchTerm))
+                return await GetUsersDTO();
+
+            var users = await _context
+                .Users.Include(u => u.Photos)
+                .Where(u =>
+                    u.UserName.ToLower().Contains(searchTerm.ToLower())
+                    || u.KnownAs.ToLower().Contains(searchTerm.ToLower())
+                    || u.City.ToLower().Contains(searchTerm.ToLower())
+                )
+                .ToListAsync();
+
+            return _mapper.Map<IEnumerable<MemeberDTO>>(users);
         }
     }
 }
