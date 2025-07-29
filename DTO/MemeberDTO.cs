@@ -23,5 +23,10 @@ namespace ChattingApplicationProject.DTO
         public string? Country { get; set; }
         public int age { get; set; }
         public ICollection<PhotoDTO>? Photos { get; set; }
+
+        // Like-related properties
+        public bool IsLikedByCurrentUser { get; set; }
+        public bool HasLikedCurrentUser { get; set; }
+        public int LikesCount { get; set; }
     }
 }

@@ -107,7 +107,7 @@ namespace ChattingApplicationProject.Controllers
             var user = await _userService.GetUserByIdDTO(userId);
             if (user == null)
                 return NotFound("User not found.");
-            
+
             var lastActiveStatus = _userService.GetLastActiveStatus(user.LastActive);
             return Ok(new { lastActiveStatus });
         }

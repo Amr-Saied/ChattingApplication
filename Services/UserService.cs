@@ -194,7 +194,7 @@ namespace ChattingApplicationProject.Services
         public string GetLastActiveStatus(DateTime lastActive)
         {
             var timeSpan = DateTime.Now - lastActive;
-            
+
             if (timeSpan.TotalMinutes < 60)
             {
                 var minutes = (int)timeSpan.TotalMinutes;

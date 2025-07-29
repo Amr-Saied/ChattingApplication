@@ -1,6 +1,5 @@
 using System.Text;
 using ChattingApplicationProject;
-using ChattingApplicationProject;
 using ChattingApplicationProject.Data;
 using ChattingApplicationProject.Helpers;
 using ChattingApplicationProject.Interfaces;
@@ -63,6 +62,7 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IPhotoService, PhotoService>();
+builder.Services.AddScoped<ILikeService, LikesService>();
 builder.Services.AddAutoMapper(
     typeof(ChattingApplicationProject.Helpers.AutoMapperProfiles).Assembly
 );
@@ -71,12 +71,13 @@ builder
     .Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        var tokenKey =
+            builder.Configuration["TokenKey"]
+            ?? throw new InvalidOperationException("TokenKey not found in configuration");
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["TokenKey"])
-            ),
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(tokenKey)),
             ValidateIssuer = false,
             ValidateAudience = false
         };

@@ -14,7 +14,10 @@ namespace ChattingApplicationProject.Services
 
         public TokenService(IConfiguration config)
         {
-            _key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(config["TokenKey"]));
+            var tokenKey =
+                config["TokenKey"]
+                ?? throw new InvalidOperationException("TokenKey not found in configuration");
+            _key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(tokenKey));
         }
 
         public string CreateToken(AppUser user)
@@ -22,7 +25,7 @@ namespace ChattingApplicationProject.Services
             var claims = new List<Claim>
             {
                 new Claim(JwtRegisteredClaimNames.NameId, user.Id.ToString()),
-                new Claim(JwtRegisteredClaimNames.UniqueName, user.UserName),
+                new Claim(JwtRegisteredClaimNames.UniqueName, user.UserName ?? string.Empty),
                 new Claim(ClaimTypes.Role, user.Role ?? "User")
             };
 
