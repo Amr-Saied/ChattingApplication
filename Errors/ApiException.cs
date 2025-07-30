@@ -8,11 +8,11 @@ namespace ChattingApplicationProject.Errors
     public class ApiException : Exception
     {
         public int StatusCode { get; set; }
-        public string Details { get; set; }
+        public string? Details { get; set; }
 
-        public string Message { get; set; }
+        public new string? Message { get; set; }
 
-        public ApiException(int statusCode, string message = null, string details = null)
+        public ApiException(int statusCode, string? message = null, string? details = null)
         {
             this.StatusCode = statusCode;
             this.Message = message;

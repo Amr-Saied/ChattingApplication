@@ -22,16 +22,6 @@ namespace ChattingApplicationProject.Services
             _mapper = mapper;
         }
 
-        public async Task<IEnumerable<AppUser>> GetUsers()
-        {
-            return await _context.Users.Include(u => u.Photos).ToListAsync();
-        }
-
-        public async Task<AppUser> GetUserById(int id)
-        {
-            return await _context.Users.Include(u => u.Photos).FirstOrDefaultAsync(x => x.Id == id);
-        }
-
         public async Task<bool> UserExists(string username)
         {
             return await _context.Users.AnyAsync(x => x.UserName == username.ToLower());
@@ -42,13 +32,6 @@ namespace ChattingApplicationProject.Services
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
             return user;
-        }
-
-        public async Task<AppUser> GetUserByUsername(string username)
-        {
-            return await _context
-                .Users.Include(u => u.Photos)
-                .SingleOrDefaultAsync(x => x.UserName == username.ToLower());
         }
 
         // New DTO methods
@@ -64,6 +47,13 @@ namespace ChattingApplicationProject.Services
                 .Users.Include(u => u.Photos)
                 .FirstOrDefaultAsync(x => x.Id == id);
             return _mapper.Map<MemeberDTO>(user);
+        }
+
+        public async Task<AppUser> GetUserByUsername(string username)
+        {
+            return await _context
+                .Users.Include(u => u.Photos)
+                .SingleOrDefaultAsync(x => x.UserName == username.ToLower());
         }
 
         public async Task<MemeberDTO> GetUserByUsernameDTO(string username)
@@ -133,6 +123,108 @@ namespace ChattingApplicationProject.Services
             _context.Photos.Remove(photo);
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        public async Task<PagedResult<MemeberDTO>> GetUsersPagedAsync(
+            PaginationParams paginationParams
+        )
+        {
+            var query = _context.Users.Include(u => u.Photos).AsQueryable();
+            query = query.Where(u => u.Role != "Admin"); // Filter out Admin users
+            query = query.OrderByDescending(u => u.Created);
+
+            var totalCount = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling(totalCount / (double)paginationParams.PageSize);
+
+            var users = await query
+                .Skip((paginationParams.PageNumber - 1) * paginationParams.PageSize)
+                .Take(paginationParams.PageSize)
+                .ToListAsync();
+
+            var userDtos = _mapper.Map<List<MemeberDTO>>(users);
+
+            return new PagedResult<MemeberDTO>
+            {
+                Items = userDtos,
+                TotalCount = totalCount,
+                PageNumber = paginationParams.PageNumber,
+                PageSize = paginationParams.PageSize,
+                TotalPages = totalPages
+            };
+        }
+
+        public async Task<IEnumerable<MemeberDTO>> SearchUsersAsync(string searchTerm)
+        {
+            if (string.IsNullOrWhiteSpace(searchTerm))
+                return await GetUsersDTO();
+
+            var users = await _context
+                .Users.Include(u => u.Photos)
+                .Where(u =>
+                    u.UserName.ToLower().Contains(searchTerm.ToLower())
+                    || u.KnownAs.ToLower().Contains(searchTerm.ToLower())
+                    || u.City.ToLower().Contains(searchTerm.ToLower())
+                )
+                .Where(u => u.Role != "Admin") // Filter out Admin users
+                .OrderByDescending(u => u.Created)
+                .ToListAsync();
+
+            return _mapper.Map<IEnumerable<MemeberDTO>>(users);
+        }
+
+        public async Task<bool> UpdateUserLastActive(AppUser user)
+        {
+            try
+            {
+                var userToUpdate = await _context.Users.FindAsync(user.Id);
+                if (userToUpdate != null)
+                {
+                    userToUpdate.LastActive = user.LastActive;
+                    await _context.SaveChangesAsync();
+                    return true;
+                }
+                return false;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public string GetLastActiveStatus(DateTime lastActive)
+        {
+            var timeSpan = DateTime.Now - lastActive;
+
+            if (timeSpan.TotalMinutes < 60)
+            {
+                var minutes = (int)timeSpan.TotalMinutes;
+                return minutes <= 1 ? "1 minute ago" : $"{minutes} minutes ago";
+            }
+            else if (timeSpan.TotalHours < 24)
+            {
+                var hours = (int)timeSpan.TotalHours;
+                return hours == 1 ? "1 hour ago" : $"{hours} hours ago";
+            }
+            else if (timeSpan.TotalDays < 7)
+            {
+                var days = (int)timeSpan.TotalDays;
+                return days == 1 ? "1 day ago" : $"{days} days ago";
+            }
+            else if (timeSpan.TotalDays < 30)
+            {
+                var weeks = (int)(timeSpan.TotalDays / 7);
+                return weeks == 1 ? "1 week ago" : $"{weeks} weeks ago";
+            }
+            else if (timeSpan.TotalDays < 365)
+            {
+                var months = (int)(timeSpan.TotalDays / 30);
+                return months == 1 ? "1 month ago" : $"{months} months ago";
+            }
+            else
+            {
+                var years = (int)(timeSpan.TotalDays / 365);
+                return years == 1 ? "1 year ago" : $"{years} years ago";
+            }
         }
     }
 }

@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using AutoMapper;
 using ChattingApplicationProject.DTO;
 using ChattingApplicationProject.Models;
-using ChattingApplicationProject.Services;
 
 namespace ChattingApplicationProject.Helpers
 {
@@ -16,12 +15,9 @@ namespace ChattingApplicationProject.Helpers
             CreateMap<AppUser, MemeberDTO>()
                 .ForMember(
                     dest => dest.PhotoUrl,
-                    opt => opt.MapFrom(src => src.Photos.FirstOrDefault(x => x.IsMain).Url)
+                    opt => opt.MapFrom(src => GetMainPhotoUrl(src.Photos))
                 )
-                .ForMember(
-                    dest => dest.age,
-                    opt => opt.MapFrom(src => new GetAgeService().CalculateAge(src.DateOfBirth))
-                );
+                .ForMember(dest => dest.age, opt => opt.MapFrom(src => src.GetAge()));
 
             CreateMap<Photo, PhotoDTO>();
             CreateMap<PhotoDTO, Photo>();
@@ -29,10 +25,22 @@ namespace ChattingApplicationProject.Helpers
 
             // Add mapping from RegisterDTO to AppUser
             CreateMap<RegisterDTO, AppUser>()
-                .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.Username.ToLower()))
+                .ForMember(
+                    dest => dest.UserName,
+                    opt => opt.MapFrom(src => (src.Username ?? string.Empty).ToLower())
+                )
                 .ForMember(dest => dest.Created, opt => opt.MapFrom(src => DateTime.Now))
                 .ForMember(dest => dest.LastActive, opt => opt.MapFrom(src => DateTime.Now))
                 .ForMember(dest => dest.Role, opt => opt.MapFrom(src => "User"));
+        }
+
+        private static string GetMainPhotoUrl(ICollection<Photo>? photos)
+        {
+            if (photos == null || !photos.Any())
+                return string.Empty;
+
+            var mainPhoto = photos.FirstOrDefault(x => x.IsMain);
+            return mainPhoto?.Url ?? string.Empty;
         }
     }
 }

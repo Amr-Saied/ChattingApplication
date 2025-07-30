@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using AutoMapper;
 using ChattingApplicationProject.DTO;
+using ChattingApplicationProject.Helpers;
 using ChattingApplicationProject.Interfaces;
 using ChattingApplicationProject.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -15,17 +16,11 @@ namespace ChattingApplicationProject.Controllers
     public class UsersController : ControllerBase
     {
         private readonly IUserService _userService;
-        private readonly IWebHostEnvironment _env;
         private readonly IPhotoService _photoService;
 
-        public UsersController(
-            IUserService userService,
-            IWebHostEnvironment env,
-            IPhotoService photoService
-        )
+        public UsersController(IUserService userService, IPhotoService photoService)
         {
             _userService = userService;
-            _env = env;
             _photoService = photoService;
         }
 
@@ -33,6 +28,22 @@ namespace ChattingApplicationProject.Controllers
         public async Task<ActionResult<IEnumerable<MemeberDTO>>> GetUsersAsync()
         {
             return Ok(await _userService.GetUsersDTO());
+        }
+
+        [HttpGet("GetUsersPaged")]
+        public async Task<ActionResult<PagedResult<MemeberDTO>>> GetUsersPagedAsync(
+            [FromQuery] PaginationParams paginationParams
+        )
+        {
+            return Ok(await _userService.GetUsersPagedAsync(paginationParams));
+        }
+
+        [HttpGet("SearchUsers")]
+        public async Task<ActionResult<IEnumerable<MemeberDTO>>> SearchUsersAsync(
+            [FromQuery] string searchTerm
+        )
+        {
+            return Ok(await _userService.SearchUsersAsync(searchTerm));
         }
 
         [HttpGet("GetUserById/{id}")]
@@ -82,6 +93,17 @@ namespace ChattingApplicationProject.Controllers
             if (!result)
                 return BadRequest("Could not delete photo from gallery.");
             return Ok(new { success = true });
+        }
+
+        [HttpGet("GetLastActiveStatus/{userId}")]
+        public async Task<ActionResult<string>> GetLastActiveStatus(int userId)
+        {
+            var user = await _userService.GetUserByIdDTO(userId);
+            if (user == null)
+                return NotFound("User not found.");
+
+            var lastActiveStatus = _userService.GetLastActiveStatus(user.LastActive);
+            return Ok(new { lastActiveStatus });
         }
     }
 }

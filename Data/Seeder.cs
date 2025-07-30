@@ -15,9 +15,15 @@ namespace ChattingApplicationProject.Data
             var userData = await File.ReadAllTextAsync("Data/GeneratedUsers.json");
             var users = JsonSerializer.Deserialize<List<AppUser>>(userData);
 
+            if (users == null)
+                return;
+
             foreach (var seedUser in users)
             {
-                seedUser.UserName = seedUser.UserName.ToLower();
+                if (seedUser.UserName != null)
+                {
+                    seedUser.UserName = seedUser.UserName.ToLower();
+                }
                 using var hmac = new System.Security.Cryptography.HMACSHA512();
                 seedUser.PasswordHash = hmac.ComputeHash(
                     System.Text.Encoding.UTF8.GetBytes("password")

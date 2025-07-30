@@ -1,8 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Threading.Tasks;
 using ChattingApplicationProject.Services;
 
 namespace ChattingApplicationProject.Models
@@ -12,8 +7,8 @@ namespace ChattingApplicationProject.Models
         public int Id { get; set; }
         public string? UserName { get; set; }
 
-        public byte[] PasswordHash { get; set; }
-        public byte[] PasswordSalt { get; set; }
+        public byte[]? PasswordHash { get; set; }
+        public byte[]? PasswordSalt { get; set; }
 
         public string? Role { get; set; }
 
@@ -28,6 +23,14 @@ namespace ChattingApplicationProject.Models
         public string? City { get; set; }
         public string? Country { get; set; }
         public ICollection<Photo>? Photos { get; set; }
+
+        // Likes relationships
+        public ICollection<UserLike>? LikedByUsers { get; set; } // Users who liked this user
+        public ICollection<UserLike>? LikedUsers { get; set; } // Users this user has liked
+
+        // Messages relationships
+        public ICollection<Message>? MessagesSent { get; set; }
+        public ICollection<Message>? MessagesReceived { get; set; }
 
         public int GetAge()
         {

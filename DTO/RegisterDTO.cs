@@ -18,7 +18,7 @@ namespace ChattingApplicationProject.DTO
             @"^[a-zA-Z0-9_]+$",
             ErrorMessage = "Username can only contain letters, numbers, and underscores"
         )]
-        public string Username { get; set; }
+        public string? Username { get; set; }
 
         [Required]
         [StringLength(
@@ -26,7 +26,7 @@ namespace ChattingApplicationProject.DTO
             MinimumLength = 6,
             ErrorMessage = "Password must be at least 6 characters long"
         )]
-        public string Password { get; set; }
+        public string? Password { get; set; }
 
         [Required]
         [Display(Name = "Date of Birth")]
@@ -38,7 +38,7 @@ namespace ChattingApplicationProject.DTO
 
         [Required]
         [Display(Name = "Gender")]
-        public string Gender { get; set; }
+        public string? Gender { get; set; }
 
         [StringLength(100, ErrorMessage = "City must not exceed 100 characters")]
         public string? City { get; set; }

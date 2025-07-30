@@ -30,7 +30,7 @@ namespace ChattingApplicationProject.Controllers
         [HttpPost("Register")]
         public async Task<ActionResult<UserDTO>> Register(RegisterDTO registerDto)
         {
-            if (await _userService.UserExists(registerDto.Username))
+            if (await _userService.UserExists(registerDto.Username ?? string.Empty))
                 return BadRequest("Username is taken");
 
             using var hmac = new HMACSHA512();
@@ -39,7 +39,9 @@ namespace ChattingApplicationProject.Controllers
             var user = _mapper.Map<AppUser>(registerDto);
 
             // Set password hash and salt
-            user.PasswordHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(registerDto.Password));
+            user.PasswordHash = hmac.ComputeHash(
+                Encoding.UTF8.GetBytes(registerDto.Password ?? string.Empty)
+            );
             user.PasswordSalt = hmac.Key;
 
             await _userService.AddUser(user);
@@ -54,12 +56,20 @@ namespace ChattingApplicationProject.Controllers
         [HttpPost("Login")]
         public async Task<ActionResult<UserDTO>> Login(LoginDTO loginDto)
         {
-            var user = await _userService.GetUserByUsername(loginDto.Username);
+            var user = await _userService.GetUserByUsername(loginDto.Username ?? string.Empty);
             if (user == null)
                 return Unauthorized("Invalid username");
 
+            if (user.PasswordSalt == null)
+                return Unauthorized("Invalid user data");
+
             using var hmac = new HMACSHA512(user.PasswordSalt);
-            var computedHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(loginDto.Password));
+            var computedHash = hmac.ComputeHash(
+                Encoding.UTF8.GetBytes(loginDto.Password ?? string.Empty)
+            );
+
+            if (user.PasswordHash == null)
+                return Unauthorized("Invalid user data");
 
             for (int i = 0; i < computedHash.Length; i++)
             {
