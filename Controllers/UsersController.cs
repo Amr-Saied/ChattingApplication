@@ -16,17 +16,11 @@ namespace ChattingApplicationProject.Controllers
     public class UsersController : ControllerBase
     {
         private readonly IUserService _userService;
-        private readonly IWebHostEnvironment _env;
         private readonly IPhotoService _photoService;
 
-        public UsersController(
-            IUserService userService,
-            IWebHostEnvironment env,
-            IPhotoService photoService
-        )
+        public UsersController(IUserService userService, IPhotoService photoService)
         {
             _userService = userService;
-            _env = env;
             _photoService = photoService;
         }
 

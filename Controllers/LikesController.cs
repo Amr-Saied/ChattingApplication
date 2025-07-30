@@ -69,6 +69,32 @@ namespace ChattingApplicationProject.Controllers
             return Ok(new { likedByCount });
         }
 
+        [HttpGet("my-likes")]
+        public async Task<IActionResult> GetMyLikes()
+        {
+            var currentUserId = GetCurrentUserId();
+            if (currentUserId == 0)
+                return Unauthorized();
+
+            var likedUsers = await _likeService.GetUsersLikedByCurrentUser(currentUserId);
+            return Ok(likedUsers);
+        }
+
+        [HttpGet("my-likes-paged")]
+        public async Task<IActionResult> GetMyLikesPaged([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 8)
+        {
+            var currentUserId = GetCurrentUserId();
+            if (currentUserId == 0)
+                return Unauthorized();
+
+            // Validate pagination parameters
+            if (pageNumber < 1) pageNumber = 1;
+            if (pageSize < 1 || pageSize > 50) pageSize = 8;
+
+            var result = await _likeService.GetUsersLikedByCurrentUserPaged(currentUserId, pageNumber, pageSize);
+            return Ok(result);
+        }
+
         private int GetCurrentUserId()
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;

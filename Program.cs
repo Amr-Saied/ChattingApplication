@@ -2,12 +2,15 @@ using System.Text;
 using ChattingApplicationProject;
 using ChattingApplicationProject.Data;
 using ChattingApplicationProject.Helpers;
+using ChattingApplicationProject.Hubs;
 using ChattingApplicationProject.Interfaces;
 using ChattingApplicationProject.Middlwares;
+using ChattingApplicationProject.Models;
 using ChattingApplicationProject.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.SignalR;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -63,6 +66,10 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IPhotoService, PhotoService>();
 builder.Services.AddScoped<ILikeService, LikesService>();
+builder.Services.AddScoped<IMessageService, MessageService>();
+
+// Add SignalR
+builder.Services.AddSignalR();
 builder.Services.AddAutoMapper(
     typeof(ChattingApplicationProject.Helpers.AutoMapperProfiles).Assembly
 );
@@ -81,6 +88,21 @@ builder
             ValidateIssuer = false,
             ValidateAudience = false
         };
+
+        // Configure SignalR to use JWT authentication
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/messagehub"))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            }
+        };
     });
 
 // Add CORS
@@ -93,8 +115,8 @@ builder.Services.AddCors(options =>
             builder
                 .WithOrigins("http://localhost:4200", "https://localhost:4200") // Angular app domains
                 .AllowAnyHeader()
-                .AllowAnyMethod();
-            // .AllowCredentials();
+                .AllowAnyMethod()
+                .AllowCredentials(); // Required for SignalR
         }
     );
 });
@@ -133,6 +155,9 @@ if (app.Environment.IsDevelopment())
 app.UseMiddleware<ExceptionHandlingMiddlware>();
 
 app.UseWebSockets();
+
+// Map SignalR Hub
+app.MapHub<MessageHub>("/messagehub");
 
 app.UseHttpsRedirection();
 

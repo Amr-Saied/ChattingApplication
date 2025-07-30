@@ -28,6 +28,10 @@ namespace ChattingApplicationProject.Models
         public ICollection<UserLike>? LikedByUsers { get; set; } // Users who liked this user
         public ICollection<UserLike>? LikedUsers { get; set; } // Users this user has liked
 
+        // Messages relationships
+        public ICollection<Message>? MessagesSent { get; set; }
+        public ICollection<Message>? MessagesReceived { get; set; }
+
         public int GetAge()
         {
             return new GetAgeService().CalculateAge(DateOfBirth);
