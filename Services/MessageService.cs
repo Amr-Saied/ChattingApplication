@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AutoMapper;
 using ChattingApplicationProject.Data;
 using ChattingApplicationProject.DTO;
 using ChattingApplicationProject.Interfaces;
@@ -13,10 +14,12 @@ namespace ChattingApplicationProject.Models
     public class MessageService : IMessageService
     {
         private readonly DataContext _context;
+        private readonly IMapper _mapper;
 
-        public MessageService(DataContext context)
+        public MessageService(DataContext context, IMapper mapper)
         {
             _context = context;
+            _mapper = mapper;
         }
 
         public async Task<List<ConversationDto>> GetConversations(int currentUserId)
@@ -37,14 +40,21 @@ namespace ChattingApplicationProject.Models
 
             foreach (var conv in conversations)
             {
-                var otherUser = await _context.Users.FindAsync(conv.OtherUserId);
+                var otherUser = await _context
+                    .Users.Include(u => u.Photos)
+                    .FirstOrDefaultAsync(u => u.Id == conv.OtherUserId);
+
                 if (otherUser != null)
                 {
+                    // Get the main photo URL
+                    var mainPhoto = otherUser.Photos?.FirstOrDefault(p => p.IsMain);
+
                     result.Add(
                         new ConversationDto
                         {
                             OtherUserId = conv.OtherUserId,
                             OtherUsername = otherUser.UserName,
+                            OtherUserPhotoUrl = mainPhoto?.Url,
                             LastMessage = conv.LastMessage.Content,
                             LastMessageTime = conv.LastMessage.MessageSent,
                             UnreadCount = conv.UnreadCount
@@ -74,25 +84,22 @@ namespace ChattingApplicationProject.Models
                 var sender = await _context.Users.FindAsync(message.SenderId);
                 var recipient = await _context.Users.FindAsync(message.RecipientId);
 
-                result.Add(
-                    new MessageDto
-                    {
-                        Id = message.Id,
-                        SenderId = message.SenderId,
-                        SenderUsername = sender?.UserName ?? "",
-                        RecipientId = message.RecipientId,
-                        RecipientUsername = recipient?.UserName ?? "",
-                        Content = message.Content,
-                        MessageSent = message.MessageSent,
-                        DateRead = message.DateRead
-                    }
-                );
+                var messageDto = _mapper.Map<MessageDto>(message);
+                messageDto.SenderUsername = sender?.UserName ?? "";
+                messageDto.RecipientUsername = recipient?.UserName ?? "";
+
+                result.Add(messageDto);
             }
 
             return result;
         }
 
-        public async Task<MessageDto> SendMessage(int senderId, int recipientId, string content)
+        public async Task<MessageDto> SendMessage(
+            int senderId,
+            int recipientId,
+            string content,
+            string emoji
+        )
         {
             var sender = await _context.Users.FindAsync(senderId);
             var recipient = await _context.Users.FindAsync(recipientId);
@@ -107,6 +114,7 @@ namespace ChattingApplicationProject.Models
                 RecipientId = recipientId,
                 RecipientUsername = recipient.UserName,
                 Content = content,
+                Emoji = emoji,
                 MessageSent = DateTime.UtcNow,
                 SenderDeleted = false,
                 RecipientDeleted = false
@@ -115,17 +123,11 @@ namespace ChattingApplicationProject.Models
             _context.Messages.Add(message);
             await _context.SaveChangesAsync();
 
-            return new MessageDto
-            {
-                Id = message.Id,
-                SenderId = message.SenderId,
-                SenderUsername = sender.UserName,
-                RecipientId = message.RecipientId,
-                RecipientUsername = recipient.UserName,
-                Content = message.Content,
-                MessageSent = message.MessageSent,
-                DateRead = message.DateRead
-            };
+            var messageDto = _mapper.Map<MessageDto>(message);
+            messageDto.SenderUsername = sender.UserName;
+            messageDto.RecipientUsername = recipient.UserName;
+
+            return messageDto;
         }
 
         public async Task<bool> MarkAsRead(int messageId, int currentUserId)
@@ -161,6 +163,15 @@ namespace ChattingApplicationProject.Models
             return await _context.Messages.CountAsync(m =>
                 m.RecipientId == currentUserId && m.DateRead == null
             );
+        }
+
+        public async Task<MessageDto?> GetMessage(int messageId)
+        {
+            var message = await _context.Messages.FindAsync(messageId);
+            if (message == null)
+                return null;
+
+            return _mapper.Map<MessageDto>(message);
         }
     }
 }

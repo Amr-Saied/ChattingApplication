@@ -15,6 +15,7 @@ namespace ChattingApplicationProject.Models
         public string RecipientUsername { get; set; }
         public AppUser Recipient { get; set; }
         public string Content { get; set; }
+        public string? Emoji { get; set; }
         public DateTime? DateRead { get; set; }
         public DateTime MessageSent { get; set; } = DateTime.UtcNow;
         public bool SenderDeleted { get; set; }

@@ -32,6 +32,9 @@ namespace ChattingApplicationProject.Helpers
                 .ForMember(dest => dest.Created, opt => opt.MapFrom(src => DateTime.Now))
                 .ForMember(dest => dest.LastActive, opt => opt.MapFrom(src => DateTime.Now))
                 .ForMember(dest => dest.Role, opt => opt.MapFrom(src => "User"));
+
+            CreateMap<Message, MessageDto>();
+            CreateMap<MessageDto, Message>();
         }
 
         private static string GetMainPhotoUrl(ICollection<Photo>? photos)

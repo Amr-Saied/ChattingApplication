@@ -15,7 +15,7 @@ namespace ChattingApplicationProject.Interfaces
         Task<List<MessageDto>> GetMessages(int currentUserId, int otherUserId);
 
         // Send a message
-        Task<MessageDto> SendMessage(int senderId, int recipientId, string content);
+        Task<MessageDto> SendMessage(int senderId, int recipientId, string content, string emoji);
 
         // Mark message as read
         Task<bool> MarkAsRead(int messageId, int currentUserId);
@@ -25,5 +25,8 @@ namespace ChattingApplicationProject.Interfaces
 
         // Get unread message count
         Task<int> GetUnreadCount(int currentUserId);
+
+        // Get single message by ID
+        Task<MessageDto?> GetMessage(int messageId);
     }
 }

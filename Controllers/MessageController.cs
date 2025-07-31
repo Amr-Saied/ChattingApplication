@@ -60,24 +60,28 @@ namespace ChattingApplicationProject.Controllers
                 var message = await _messageService.SendMessage(
                     currentUserId,
                     messageDto.RecipientId,
-                    messageDto.Content
+                    messageDto.Content,
+                    messageDto.Emoji
                 );
 
-                // Notify recipient via SignalR if they're online
-                await _hubContext.Clients.All.SendAsync(
-                    "ReceiveMessage",
-                    new
-                    {
-                        Id = message.Id,
-                        SenderId = message.SenderId,
-                        SenderUsername = message.SenderUsername,
-                        RecipientId = message.RecipientId,
-                        RecipientUsername = message.RecipientUsername,
-                        Content = message.Content,
-                        MessageSent = message.MessageSent,
-                        DateRead = message.DateRead
-                    }
-                );
+                // Notify ONLY the recipient via SignalR
+                await _hubContext
+                    .Clients.User(message.RecipientId.ToString())
+                    .SendAsync(
+                        "ReceiveMessage",
+                        new
+                        {
+                            Id = message.Id,
+                            SenderId = message.SenderId,
+                            SenderUsername = message.SenderUsername,
+                            RecipientId = message.RecipientId,
+                            RecipientUsername = message.RecipientUsername,
+                            Content = message.Content,
+                            Emoji = message.Emoji,
+                            MessageSent = message.MessageSent,
+                            DateRead = message.DateRead
+                        }
+                    );
 
                 return Ok(message);
             }
@@ -97,8 +101,14 @@ namespace ChattingApplicationProject.Controllers
             var result = await _messageService.MarkAsRead(messageId, currentUserId);
             if (result)
             {
-                // Notify sender via SignalR that message was read
-                await _hubContext.Clients.All.SendAsync("MessageRead", messageId, currentUserId);
+                // Notify ONLY the sender via SignalR that message was read
+                var message = await _messageService.GetMessage(messageId);
+                if (message != null)
+                {
+                    await _hubContext
+                        .Clients.User(message.SenderId.ToString())
+                        .SendAsync("MessageRead", messageId, currentUserId);
+                }
                 return Ok(new { success = true });
             }
 
