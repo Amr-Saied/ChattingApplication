@@ -67,6 +67,7 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IPhotoService, PhotoService>();
 builder.Services.AddScoped<ILikeService, LikesService>();
 builder.Services.AddScoped<IMessageService, MessageService>();
+builder.Services.AddScoped<IAdminService, AdminService>();
 
 // Add SignalR
 builder.Services.AddSignalR();

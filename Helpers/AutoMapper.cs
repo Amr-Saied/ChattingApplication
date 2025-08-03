@@ -35,6 +35,53 @@ namespace ChattingApplicationProject.Helpers
 
             CreateMap<Message, MessageDto>();
             CreateMap<MessageDto, Message>();
+
+            // Admin DTOs mappings
+            CreateMap<AppUser, AdminUserResponseDTO>()
+                .ForMember(dest => dest.Age, opt => opt.MapFrom(src => src.GetAge()))
+                .ForMember(dest => dest.PhotoUrl, opt => opt.Ignore()); // Set manually in service
+
+            CreateMap<AdminEditUserDTO, AppUser>()
+                .ForMember(
+                    dest => dest.UserName,
+                    opt => opt.Condition(src => !string.IsNullOrEmpty(src.UserName))
+                )
+                .ForMember(
+                    dest => dest.KnownAs,
+                    opt => opt.Condition(src => !string.IsNullOrEmpty(src.KnownAs))
+                )
+                .ForMember(
+                    dest => dest.DateOfBirth,
+                    opt => opt.Condition(src => src.DateOfBirth != default)
+                )
+                .ForMember(
+                    dest => dest.Gender,
+                    opt => opt.Condition(src => !string.IsNullOrEmpty(src.Gender))
+                )
+                .ForMember(
+                    dest => dest.Introduction,
+                    opt => opt.Condition(src => !string.IsNullOrEmpty(src.Introduction))
+                )
+                .ForMember(
+                    dest => dest.LookingFor,
+                    opt => opt.Condition(src => !string.IsNullOrEmpty(src.LookingFor))
+                )
+                .ForMember(
+                    dest => dest.Interests,
+                    opt => opt.Condition(src => !string.IsNullOrEmpty(src.Interests))
+                )
+                .ForMember(
+                    dest => dest.City,
+                    opt => opt.Condition(src => !string.IsNullOrEmpty(src.City))
+                )
+                .ForMember(
+                    dest => dest.Country,
+                    opt => opt.Condition(src => !string.IsNullOrEmpty(src.Country))
+                )
+                .ForMember(
+                    dest => dest.Role,
+                    opt => opt.Condition(src => !string.IsNullOrEmpty(src.Role))
+                );
         }
 
         private static string GetMainPhotoUrl(ICollection<Photo>? photos)
