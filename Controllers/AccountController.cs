@@ -15,16 +15,19 @@ namespace ChattingApplicationProject.Controllers
         private readonly IUserService _userService;
         private readonly ITokenService _tokenService;
         private readonly IMapper _mapper;
+        private readonly IAdminService _adminService;
 
         public AccountController(
             IUserService userService,
             ITokenService tokenService,
-            IMapper mapper
+            IMapper mapper,
+            IAdminService adminService
         )
         {
             _userService = userService;
             _tokenService = tokenService;
             _mapper = mapper;
+            _adminService = adminService;
         }
 
         [HttpPost("Register")]
@@ -77,12 +80,73 @@ namespace ChattingApplicationProject.Controllers
                     return Unauthorized("Invalid password");
             }
 
+            // Check if user is banned - this will automatically unban expired users
+            var isBanned = await _adminService.IsUserBannedAsync(user.Id);
+            if (isBanned)
+            {
+                // Get updated user details after potential unban
+                var userDetails = await _adminService.GetUserForAdminAsync(user.Id);
+                if (userDetails != null && userDetails.IsBanned)
+                {
+                    var banMessage = "Your account has been banned.";
+                    if (!string.IsNullOrEmpty(userDetails.BanReason))
+                    {
+                        banMessage += $" Reason: {userDetails.BanReason}";
+                    }
+                    if (!userDetails.IsPermanentBan && userDetails.BanExpiryDate.HasValue)
+                    {
+                        banMessage +=
+                            $" Your ban expires on: {userDetails.BanExpiryDate.Value.ToString("MM/dd/yyyy hh:mm tt")}";
+                    }
+
+                    banMessage += " Please contact an administrator for more information.";
+                    return BadRequest(
+                        new
+                        {
+                            error = "USER_BANNED",
+                            message = banMessage,
+                            isPermanentBan = userDetails.IsPermanentBan,
+                            banExpiryDate = userDetails.BanExpiryDate,
+                            banReason = userDetails.BanReason
+                        }
+                    );
+                }
+            }
+
             return new UserDTO
             {
                 Username = user.UserName,
                 Token = _tokenService.CreateToken(user),
                 Role = user.Role
             };
+        }
+
+        [HttpGet("CheckBanStatus/{userId}")]
+        public async Task<ActionResult> CheckCurrentUserBanStatus(int userId)
+        {
+            try
+            {
+                var user = await _adminService.GetUserForAdminAsync(userId);
+                if (user == null)
+                {
+                    return Ok(new { userId, isBanned = false });
+                }
+
+                return Ok(
+                    new
+                    {
+                        userId,
+                        isBanned = user.IsBanned,
+                        banReason = user.BanReason,
+                        isPermanentBan = user.IsPermanentBan,
+                        banExpiryDate = user.BanExpiryDate.HasValue ? user.BanExpiryDate.Value.ToString("MM/dd/yyyy hh:mm tt") : null
+                    }
+                );
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error checking ban status: {ex.Message}");
+            }
         }
     }
 }

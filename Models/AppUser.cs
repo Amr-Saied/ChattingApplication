@@ -32,6 +32,12 @@ namespace ChattingApplicationProject.Models
         public ICollection<Message>? MessagesSent { get; set; }
         public ICollection<Message>? MessagesReceived { get; set; }
 
+        // Ban functionality
+        public bool IsBanned { get; set; } = false;
+        public string? BanReason { get; set; }
+        public DateTime? BanExpiryDate { get; set; }
+        public bool IsPermanentBan { get; set; } = false;
+
         public int GetAge()
         {
             return new GetAgeService().CalculateAge(DateOfBirth);
