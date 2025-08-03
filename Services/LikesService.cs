@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AutoMapper;
 using ChattingApplicationProject.Data;
 using ChattingApplicationProject.DTO;
 using ChattingApplicationProject.Interfaces;
@@ -14,11 +15,13 @@ namespace ChattingApplicationProject.Services
     {
         private readonly DataContext _context;
         private readonly GetAgeService _ageService;
+        private readonly IMapper _mapper;
 
-        public LikesService(DataContext context)
+        public LikesService(DataContext context, IMapper mapper)
         {
             _context = context;
             _ageService = new GetAgeService();
+            _mapper = mapper;
         }
 
         public async Task<bool> AddLike(int sourceUserId, int likedUserId)
@@ -89,34 +92,29 @@ namespace ChattingApplicationProject.Services
 
             var likedUsers = await _context
                 .Users.Where(u => likedUserIds.Contains(u.Id))
-                .Select(u => new MemeberDTO
-                {
-                    Id = u.Id,
-                    UserName = u.UserName,
-                    age = _ageService.CalculateAge(u.DateOfBirth),
-                    KnownAs = u.KnownAs,
-                    PhotoUrl = u.Photos.FirstOrDefault(p => p.IsMain).Url,
-                    City = u.City,
-                    Country = u.Country,
-                    Photos = u
-                        .Photos.Select(p => new PhotoDTO
-                        {
-                            Id = p.Id,
-                            Url = p.Url,
-                            IsMain = p.IsMain
-                        })
-                        .ToList()
-                })
+                .Include(u => u.Photos)
                 .ToListAsync();
 
-            return likedUsers;
+            var result = new List<MemeberDTO>();
+            foreach (var user in likedUsers)
+            {
+                var memberDto = _mapper.Map<MemeberDTO>(user);
+                memberDto.age = _ageService.CalculateAge(user.DateOfBirth);
+                result.Add(memberDto);
+            }
+
+            return result;
         }
 
-        public async Task<PagedResult<MemeberDTO>> GetUsersLikedByCurrentUserPaged(int currentUserId, int pageNumber, int pageSize)
+        public async Task<PagedResult<MemeberDTO>> GetUsersLikedByCurrentUserPaged(
+            int currentUserId,
+            int pageNumber,
+            int pageSize
+        )
         {
             // Get total count of liked users
-            var totalCount = await _context.UserLikes
-                .Where(x => x.SourceUserId == currentUserId)
+            var totalCount = await _context
+                .UserLikes.Where(x => x.SourceUserId == currentUserId)
                 .CountAsync();
 
             if (totalCount == 0)
@@ -130,37 +128,30 @@ namespace ChattingApplicationProject.Services
                 };
 
             // Get liked user IDs for current page
-            var likedUserIds = await _context.UserLikes
-                .Where(x => x.SourceUserId == currentUserId)
+            var likedUserIds = await _context
+                .UserLikes.Where(x => x.SourceUserId == currentUserId)
                 .Select(x => x.LikedUserId)
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
 
             // Get user details for the current page
-            var likedUsers = await _context.Users
-                .Where(u => likedUserIds.Contains(u.Id))
-                .Select(u => new MemeberDTO
-                {
-                    Id = u.Id,
-                    UserName = u.UserName,
-                    age = _ageService.CalculateAge(u.DateOfBirth),
-                    KnownAs = u.KnownAs,
-                    PhotoUrl = u.Photos.FirstOrDefault(p => p.IsMain).Url,
-                    City = u.City,
-                    Country = u.Country,
-                    Photos = u.Photos.Select(p => new PhotoDTO
-                    {
-                        Id = p.Id,
-                        Url = p.Url,
-                        IsMain = p.IsMain
-                    }).ToList()
-                })
+            var likedUsers = await _context
+                .Users.Where(u => likedUserIds.Contains(u.Id))
+                .Include(u => u.Photos)
                 .ToListAsync();
+
+            var result = new List<MemeberDTO>();
+            foreach (var user in likedUsers)
+            {
+                var memberDto = _mapper.Map<MemeberDTO>(user);
+                memberDto.age = _ageService.CalculateAge(user.DateOfBirth);
+                result.Add(memberDto);
+            }
 
             return new PagedResult<MemeberDTO>
             {
-                Items = likedUsers,
+                Items = result,
                 TotalCount = totalCount,
                 PageNumber = pageNumber,
                 PageSize = pageSize,

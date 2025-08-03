@@ -8,9 +8,9 @@ using ChattingApplicationProject.Middlwares;
 using ChattingApplicationProject.Models;
 using ChattingApplicationProject.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.AspNetCore.SignalR;
 
 var builder = WebApplication.CreateBuilder(args);
 

@@ -60,24 +60,30 @@ namespace ChattingApplicationProject.Controllers
                 var message = await _messageService.SendMessage(
                     currentUserId,
                     messageDto.RecipientId,
-                    messageDto.Content
+                    messageDto.Content,
+                    messageDto.Emoji
                 );
 
-                // Notify recipient via SignalR if they're online
-                await _hubContext.Clients.All.SendAsync(
-                    "ReceiveMessage",
-                    new
-                    {
-                        Id = message.Id,
-                        SenderId = message.SenderId,
-                        SenderUsername = message.SenderUsername,
-                        RecipientId = message.RecipientId,
-                        RecipientUsername = message.RecipientUsername,
-                        Content = message.Content,
-                        MessageSent = message.MessageSent,
-                        DateRead = message.DateRead
-                    }
-                );
+                // Notify ONLY the recipient via SignalR
+                await _hubContext
+                    .Clients.User(message.RecipientId.ToString())
+                    .SendAsync(
+                        "ReceiveMessage",
+                        new
+                        {
+                            Id = message.Id,
+                            SenderId = message.SenderId,
+                            SenderUsername = message.SenderUsername,
+                            SenderPhotoUrl = message.SenderPhotoUrl,
+                            RecipientId = message.RecipientId,
+                            RecipientUsername = message.RecipientUsername,
+                            RecipientPhotoUrl = message.RecipientPhotoUrl,
+                            Content = message.Content,
+                            Emoji = message.Emoji,
+                            MessageSent = message.MessageSent,
+                            DateRead = message.DateRead
+                        }
+                    );
 
                 return Ok(message);
             }
@@ -97,8 +103,24 @@ namespace ChattingApplicationProject.Controllers
             var result = await _messageService.MarkAsRead(messageId, currentUserId);
             if (result)
             {
-                // Notify sender via SignalR that message was read
-                await _hubContext.Clients.All.SendAsync("MessageRead", messageId, currentUserId);
+                // Notify ONLY the sender via SignalR that message was read
+                var message = await _messageService.GetMessage(messageId);
+                if (message != null)
+                {
+                    Console.WriteLine(
+                        $"🔔 Backend: Sending MessageRead SignalR to user {message.SenderId} for message {messageId} from reader {currentUserId}"
+                    );
+                    await _hubContext
+                        .Clients.User(message.SenderId.ToString())
+                        .SendAsync("MessageRead", messageId, currentUserId);
+                    Console.WriteLine($"✅ Backend: MessageRead SignalR sent successfully");
+                }
+                else
+                {
+                    Console.WriteLine(
+                        $"❌ Backend: Message {messageId} not found for SignalR notification"
+                    );
+                }
                 return Ok(new { success = true });
             }
 
@@ -112,9 +134,28 @@ namespace ChattingApplicationProject.Controllers
             if (currentUserId == 0)
                 return Unauthorized();
 
+            // Get message details before deletion for SignalR notification
+            var messageToDelete = await _messageService.GetMessage(messageId);
+
             var result = await _messageService.DeleteMessage(messageId, currentUserId);
             if (result)
+            {
+                // Notify both the sender and recipient via SignalR that message was deleted
+                if (messageToDelete != null)
+                {
+                    // Notify the other user (recipient or sender, depending on who deleted it)
+                    var otherUserId =
+                        messageToDelete.SenderId == currentUserId
+                            ? messageToDelete.RecipientId
+                            : messageToDelete.SenderId;
+
+                    await _hubContext
+                        .Clients.User(otherUserId.ToString())
+                        .SendAsync("MessageDeleted", messageId);
+                }
+
                 return Ok(new { success = true });
+            }
 
             return BadRequest("Failed to delete message");
         }
