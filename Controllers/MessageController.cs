@@ -74,8 +74,10 @@ namespace ChattingApplicationProject.Controllers
                             Id = message.Id,
                             SenderId = message.SenderId,
                             SenderUsername = message.SenderUsername,
+                            SenderPhotoUrl = message.SenderPhotoUrl,
                             RecipientId = message.RecipientId,
                             RecipientUsername = message.RecipientUsername,
+                            RecipientPhotoUrl = message.RecipientPhotoUrl,
                             Content = message.Content,
                             Emoji = message.Emoji,
                             MessageSent = message.MessageSent,
@@ -105,9 +107,19 @@ namespace ChattingApplicationProject.Controllers
                 var message = await _messageService.GetMessage(messageId);
                 if (message != null)
                 {
+                    Console.WriteLine(
+                        $"🔔 Backend: Sending MessageRead SignalR to user {message.SenderId} for message {messageId} from reader {currentUserId}"
+                    );
                     await _hubContext
                         .Clients.User(message.SenderId.ToString())
                         .SendAsync("MessageRead", messageId, currentUserId);
+                    Console.WriteLine($"✅ Backend: MessageRead SignalR sent successfully");
+                }
+                else
+                {
+                    Console.WriteLine(
+                        $"❌ Backend: Message {messageId} not found for SignalR notification"
+                    );
                 }
                 return Ok(new { success = true });
             }
@@ -122,9 +134,28 @@ namespace ChattingApplicationProject.Controllers
             if (currentUserId == 0)
                 return Unauthorized();
 
+            // Get message details before deletion for SignalR notification
+            var messageToDelete = await _messageService.GetMessage(messageId);
+
             var result = await _messageService.DeleteMessage(messageId, currentUserId);
             if (result)
+            {
+                // Notify both the sender and recipient via SignalR that message was deleted
+                if (messageToDelete != null)
+                {
+                    // Notify the other user (recipient or sender, depending on who deleted it)
+                    var otherUserId =
+                        messageToDelete.SenderId == currentUserId
+                            ? messageToDelete.RecipientId
+                            : messageToDelete.SenderId;
+
+                    await _hubContext
+                        .Clients.User(otherUserId.ToString())
+                        .SendAsync("MessageDeleted", messageId);
+                }
+
                 return Ok(new { success = true });
+            }
 
             return BadRequest("Failed to delete message");
         }

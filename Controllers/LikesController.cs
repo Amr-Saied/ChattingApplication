@@ -81,17 +81,26 @@ namespace ChattingApplicationProject.Controllers
         }
 
         [HttpGet("my-likes-paged")]
-        public async Task<IActionResult> GetMyLikesPaged([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 8)
+        public async Task<IActionResult> GetMyLikesPaged(
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 8
+        )
         {
             var currentUserId = GetCurrentUserId();
             if (currentUserId == 0)
                 return Unauthorized();
 
             // Validate pagination parameters
-            if (pageNumber < 1) pageNumber = 1;
-            if (pageSize < 1 || pageSize > 50) pageSize = 8;
+            if (pageNumber < 1)
+                pageNumber = 1;
+            if (pageSize < 1 || pageSize > 50)
+                pageSize = 8;
 
-            var result = await _likeService.GetUsersLikedByCurrentUserPaged(currentUserId, pageNumber, pageSize);
+            var result = await _likeService.GetUsersLikedByCurrentUserPaged(
+                currentUserId,
+                pageNumber,
+                pageSize
+            );
             return Ok(result);
         }
 

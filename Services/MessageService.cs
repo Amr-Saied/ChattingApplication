@@ -81,12 +81,22 @@ namespace ChattingApplicationProject.Models
 
             foreach (var message in messages)
             {
-                var sender = await _context.Users.FindAsync(message.SenderId);
-                var recipient = await _context.Users.FindAsync(message.RecipientId);
+                var sender = await _context
+                    .Users.Include(u => u.Photos)
+                    .FirstOrDefaultAsync(u => u.Id == message.SenderId);
+                var recipient = await _context
+                    .Users.Include(u => u.Photos)
+                    .FirstOrDefaultAsync(u => u.Id == message.RecipientId);
 
                 var messageDto = _mapper.Map<MessageDto>(message);
                 messageDto.SenderUsername = sender?.UserName ?? "";
                 messageDto.RecipientUsername = recipient?.UserName ?? "";
+
+                // Get main photo URLs
+                messageDto.SenderPhotoUrl = sender?.Photos?.FirstOrDefault(p => p.IsMain)?.Url;
+                messageDto.RecipientPhotoUrl = recipient
+                    ?.Photos?.FirstOrDefault(p => p.IsMain)
+                    ?.Url;
 
                 result.Add(messageDto);
             }
@@ -101,8 +111,12 @@ namespace ChattingApplicationProject.Models
             string emoji
         )
         {
-            var sender = await _context.Users.FindAsync(senderId);
-            var recipient = await _context.Users.FindAsync(recipientId);
+            var sender = await _context
+                .Users.Include(u => u.Photos)
+                .FirstOrDefaultAsync(u => u.Id == senderId);
+            var recipient = await _context
+                .Users.Include(u => u.Photos)
+                .FirstOrDefaultAsync(u => u.Id == recipientId);
 
             if (sender == null || recipient == null)
                 throw new ArgumentException("Invalid sender or recipient");
@@ -126,6 +140,10 @@ namespace ChattingApplicationProject.Models
             var messageDto = _mapper.Map<MessageDto>(message);
             messageDto.SenderUsername = sender.UserName;
             messageDto.RecipientUsername = recipient.UserName;
+
+            // Get main photo URLs
+            messageDto.SenderPhotoUrl = sender?.Photos?.FirstOrDefault(p => p.IsMain)?.Url;
+            messageDto.RecipientPhotoUrl = recipient?.Photos?.FirstOrDefault(p => p.IsMain)?.Url;
 
             return messageDto;
         }

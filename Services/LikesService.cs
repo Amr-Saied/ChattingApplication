@@ -2,12 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AutoMapper;
 using ChattingApplicationProject.Data;
 using ChattingApplicationProject.DTO;
 using ChattingApplicationProject.Interfaces;
 using ChattingApplicationProject.Models;
 using Microsoft.EntityFrameworkCore;
-using AutoMapper;
 
 namespace ChattingApplicationProject.Services
 {
@@ -106,11 +106,15 @@ namespace ChattingApplicationProject.Services
             return result;
         }
 
-        public async Task<PagedResult<MemeberDTO>> GetUsersLikedByCurrentUserPaged(int currentUserId, int pageNumber, int pageSize)
+        public async Task<PagedResult<MemeberDTO>> GetUsersLikedByCurrentUserPaged(
+            int currentUserId,
+            int pageNumber,
+            int pageSize
+        )
         {
             // Get total count of liked users
-            var totalCount = await _context.UserLikes
-                .Where(x => x.SourceUserId == currentUserId)
+            var totalCount = await _context
+                .UserLikes.Where(x => x.SourceUserId == currentUserId)
                 .CountAsync();
 
             if (totalCount == 0)
@@ -124,16 +128,16 @@ namespace ChattingApplicationProject.Services
                 };
 
             // Get liked user IDs for current page
-            var likedUserIds = await _context.UserLikes
-                .Where(x => x.SourceUserId == currentUserId)
+            var likedUserIds = await _context
+                .UserLikes.Where(x => x.SourceUserId == currentUserId)
                 .Select(x => x.LikedUserId)
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
 
             // Get user details for the current page
-            var likedUsers = await _context.Users
-                .Where(u => likedUserIds.Contains(u.Id))
+            var likedUsers = await _context
+                .Users.Where(u => likedUserIds.Contains(u.Id))
                 .Include(u => u.Photos)
                 .ToListAsync();
 
