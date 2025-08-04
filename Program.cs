@@ -68,6 +68,11 @@ builder.Services.AddScoped<IPhotoService, PhotoService>();
 builder.Services.AddScoped<ILikeService, LikesService>();
 builder.Services.AddScoped<IMessageService, MessageService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IUserCleanupService, UserCleanupService>();
+
+// Add Background Cleanup Service
+builder.Services.AddHostedService<BackgroundCleanupService>();
 
 // Add SignalR
 builder.Services.AddSignalR();

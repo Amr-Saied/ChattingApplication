@@ -6,6 +6,7 @@ namespace ChattingApplicationProject.Models
     {
         public int Id { get; set; }
         public string? UserName { get; set; }
+        public string? Email { get; set; } // Add email field
 
         public byte[]? PasswordHash { get; set; }
         public byte[]? PasswordSalt { get; set; }
@@ -23,6 +24,20 @@ namespace ChattingApplicationProject.Models
         public string? City { get; set; }
         public string? Country { get; set; }
         public ICollection<Photo>? Photos { get; set; }
+
+        // Email confirmation fields
+        public bool EmailConfirmed { get; set; } = false;
+        public string? EmailConfirmationToken { get; set; }
+        public DateTime? EmailConfirmationTokenExpiry { get; set; }
+
+        // Password reset fields
+        public string? PasswordResetToken { get; set; }
+        public DateTime? PasswordResetTokenExpiry { get; set; }
+
+        // Google OAuth fields
+        public string? GoogleId { get; set; }
+        public string? ProfilePictureUrl { get; set; }
+        public bool IsGoogleUser { get; set; } = false;
 
         // Likes relationships
         public ICollection<UserLike>? LikedByUsers { get; set; } // Users who liked this user

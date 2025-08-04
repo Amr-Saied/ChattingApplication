@@ -226,5 +226,33 @@ namespace ChattingApplicationProject.Services
                 return years == 1 ? "1 year ago" : $"{years} years ago";
             }
         }
+
+        public async Task<AppUser?> GetUserByGoogleId(string? googleId)
+        {
+            if (string.IsNullOrEmpty(googleId))
+                return null;
+
+            return await _context
+                .Users.Include(u => u.Photos)
+                .FirstOrDefaultAsync(u => u.GoogleId == googleId);
+        }
+
+        public async Task<object> GetUnconfirmedUsersCountAsync()
+        {
+            var unconfirmedCount = await _context.Users.Where(u => !u.EmailConfirmed).CountAsync();
+
+            var expiredCount = await _context
+                .Users.Where(u =>
+                    !u.EmailConfirmed && u.EmailConfirmationTokenExpiry < DateTime.UtcNow
+                )
+                .CountAsync();
+
+            return new
+            {
+                totalUnconfirmed = unconfirmedCount,
+                expiredUnconfirmed = expiredCount,
+                message = "Automatic cleanup runs every 24 hours. Expired users are deleted after 7 days."
+            };
+        }
     }
 }
