@@ -65,6 +65,7 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IPhotoService, PhotoService>();
+builder.Services.AddScoped<IVoiceService, VoiceService>();
 builder.Services.AddScoped<ILikeService, LikesService>();
 builder.Services.AddScoped<IMessageService, MessageService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
@@ -112,6 +113,9 @@ builder
     });
 
 // Add CORS
+var frontendUrl = builder.Configuration["FrontendUrl"] ?? "http://localhost:4200";
+var frontendUrlHttps = frontendUrl.Replace("http://", "https://");
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(
@@ -119,7 +123,7 @@ builder.Services.AddCors(options =>
         builder =>
         {
             builder
-                .WithOrigins("http://localhost:4200", "https://localhost:4200") // Angular app domains
+                .WithOrigins(frontendUrl, frontendUrlHttps) // Angular app domains
                 .AllowAnyHeader()
                 .AllowAnyMethod()
                 .AllowCredentials(); // Required for SignalR
@@ -137,6 +141,8 @@ builder.Services.AddAuthorization();
 builder.Services.Configure<CloudinaryOptions>(
     builder.Configuration.GetSection("CloudinarySettings")
 );
+
+builder.Services.Configure<GoogleSettings>(builder.Configuration.GetSection("GoogleSettings"));
 
 var app = builder.Build();
 

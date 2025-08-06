@@ -25,7 +25,7 @@ namespace ChattingApplicationProject.Services
             string confirmationLink
         )
         {
-            var subject = "Confirm Your Email - ChattingApp";
+            var subject = "Confirm Your Email - ChatBridge";
             var body =
                 $@"
                 <h2>Welcome to ChattingApp!</h2>
@@ -35,14 +35,14 @@ namespace ChattingApplicationProject.Services
                 <p>If the button doesn't work, copy and paste this link into your browser:</p>
                 <p>{confirmationLink}</p>
                 <p>This link will expire in 24 hours.</p>
-                <p>Best regards,<br>The ChattingApp Team</p>";
+                <p>Best regards,<br>The ChatBridge Team</p>";
 
             await SendEmailAsync(email, subject, body);
         }
 
         public async Task SendPasswordResetAsync(string email, string username, string resetLink)
         {
-            var subject = "Reset Your Password - ChattingApp";
+            var subject = "Reset Your Password - ChatBridge";
             var body =
                 $@"
                 <h2>Password Reset Request</h2>
@@ -53,14 +53,14 @@ namespace ChattingApplicationProject.Services
                 <p>{resetLink}</p>
                 <p>This link will expire in 1 hour.</p>
                 <p>If you didn't request this, please ignore this email.</p>
-                <p>Best regards,<br>The ChattingApp Team</p>";
+                <p>Best regards,<br>The ChatBridge Team</p>";
 
             await SendEmailAsync(email, subject, body);
         }
 
         public async Task SendUsernameReminderAsync(string email, string username)
         {
-            var subject = "Your Username - ChattingApp";
+            var subject = "Your Username - ChatBridge";
             var body =
                 $@"
                 <h2>Username Reminder</h2>
@@ -68,7 +68,7 @@ namespace ChattingApplicationProject.Services
                 <p>You requested a reminder of your username. Here it is:</p>
                 <p><strong>Username: {username}</strong></p>
                 <p>You can now log in to your account.</p>
-                <p>Best regards,<br>The ChattingApp Team</p>";
+                <p>Best regards,<br>The ChatBridge Team</p>";
 
             await SendEmailAsync(email, subject, body);
         }

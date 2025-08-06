@@ -26,7 +26,7 @@ namespace ChattingApplicationProject.Models
         {
             var conversations = await _context
                 .Messages.Where(m => m.SenderId == currentUserId || m.RecipientId == currentUserId)
-                .Where(m => !m.SenderDeleted || !m.RecipientDeleted)
+                .Where(m => !m.SenderDeleted && !m.RecipientDeleted)
                 .GroupBy(m => m.SenderId == currentUserId ? m.RecipientId : m.SenderId)
                 .Select(g => new
                 {
@@ -73,7 +73,7 @@ namespace ChattingApplicationProject.Models
                     (m.SenderId == currentUserId && m.RecipientId == otherUserId)
                     || (m.SenderId == otherUserId && m.RecipientId == currentUserId)
                 )
-                .Where(m => !m.SenderDeleted || !m.RecipientDeleted)
+                .Where(m => !m.SenderDeleted && !m.RecipientDeleted)
                 .OrderBy(m => m.MessageSent)
                 .ToListAsync();
 
@@ -148,6 +148,52 @@ namespace ChattingApplicationProject.Models
             return messageDto;
         }
 
+        public async Task<MessageDto> SendVoiceMessage(
+            int senderId,
+            int recipientId,
+            string voiceUrl,
+            int duration
+        )
+        {
+            var sender = await _context
+                .Users.Include(u => u.Photos)
+                .FirstOrDefaultAsync(u => u.Id == senderId);
+            var recipient = await _context
+                .Users.Include(u => u.Photos)
+                .FirstOrDefaultAsync(u => u.Id == recipientId);
+
+            if (sender == null || recipient == null)
+                throw new ArgumentException("Invalid sender or recipient");
+
+            var message = new Message
+            {
+                SenderId = senderId,
+                SenderUsername = sender.UserName,
+                RecipientId = recipientId,
+                RecipientUsername = recipient.UserName,
+                Content = "🎤 Voice Message", // Default content for voice messages
+                VoiceUrl = voiceUrl,
+                VoiceDuration = duration,
+                MessageType = "voice",
+                MessageSent = DateTime.UtcNow,
+                SenderDeleted = false,
+                RecipientDeleted = false
+            };
+
+            _context.Messages.Add(message);
+            await _context.SaveChangesAsync();
+
+            var messageDto = _mapper.Map<MessageDto>(message);
+            messageDto.SenderUsername = sender.UserName;
+            messageDto.RecipientUsername = recipient.UserName;
+
+            // Get main photo URLs
+            messageDto.SenderPhotoUrl = sender?.Photos?.FirstOrDefault(p => p.IsMain)?.Url;
+            messageDto.RecipientPhotoUrl = recipient?.Photos?.FirstOrDefault(p => p.IsMain)?.Url;
+
+            return messageDto;
+        }
+
         public async Task<bool> MarkAsRead(int messageId, int currentUserId)
         {
             var message = await _context.Messages.FindAsync(messageId);
@@ -179,7 +225,7 @@ namespace ChattingApplicationProject.Models
         public async Task<int> GetUnreadCount(int currentUserId)
         {
             return await _context.Messages.CountAsync(m =>
-                m.RecipientId == currentUserId && m.DateRead == null
+                m.RecipientId == currentUserId && m.DateRead == null && !m.SenderDeleted && !m.RecipientDeleted
             );
         }
 

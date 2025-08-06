@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using AutoMapper;
 using ChattingApplicationProject.DTO;
+using ChattingApplicationProject.Helpers.helperClasses;
 using ChattingApplicationProject.Interfaces;
 using ChattingApplicationProject.Models;
 using ChattingApplicationProject.Services;
@@ -20,13 +21,15 @@ namespace ChattingApplicationProject.Controllers
         private readonly IMapper _mapper;
         private readonly IAdminService _adminService;
         private readonly IEmailService _emailService;
+        private readonly IConfiguration _configuration;
 
         public AccountController(
             IUserService userService,
             ITokenService tokenService,
             IMapper mapper,
             IAdminService adminService,
-            IEmailService emailService
+            IEmailService emailService,
+            IConfiguration configuration
         )
         {
             _userService = userService;
@@ -34,6 +37,7 @@ namespace ChattingApplicationProject.Controllers
             _mapper = mapper;
             _adminService = adminService;
             _emailService = emailService;
+            _configuration = configuration;
         }
 
         [HttpPost("Register")]
@@ -211,18 +215,282 @@ namespace ChattingApplicationProject.Controllers
             var user = await _emailService.GetUserByEmailConfirmationToken(token);
 
             if (user == null)
-                return BadRequest("Invalid confirmation token");
+                return Content(
+                    GetErrorHtml(
+                        "Invalid confirmation token",
+                        "The confirmation link is invalid or has already been used."
+                    ),
+                    "text/html"
+                );
 
             if (user.EmailConfirmationTokenExpiry < DateTime.UtcNow)
-                return BadRequest("Confirmation token has expired");
+                return Content(
+                    GetErrorHtml(
+                        "Confirmation token has expired",
+                        "The confirmation link has expired. Please request a new confirmation email."
+                    ),
+                    "text/html"
+                );
 
             user.EmailConfirmed = true;
             user.EmailConfirmationToken = null;
             user.EmailConfirmationTokenExpiry = null;
 
             await _emailService.UpdateUser(user);
+            return Content(GetSuccessHtml(user.UserName!), "text/html");
+        }
 
-            return Ok(new { message = "Email confirmed successfully!" });
+        private string GetSuccessHtml(string username)
+        {
+            var baseUrl = $"{Request.Scheme}://{Request.Host}";
+            return $@"
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>Email Confirmed - ChattingApp</title>
+    <style>
+        * {{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }}
+        
+        body {{
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }}
+        
+        .container {{
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 40px;
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+        }}
+        
+        .success-icon {{
+            width: 80px;
+            height: 80px;
+            background: #4CAF50;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 30px;
+            animation: bounce 0.6s ease-in-out;
+        }}
+        
+        .success-icon::after {{
+            content: '✓';
+            color: white;
+            font-size: 40px;
+            font-weight: bold;
+        }}
+        
+        @keyframes bounce {{
+            0%, 20%, 50%, 80%, 100% {{ transform: translateY(0); }}
+            40% {{ transform: translateY(-10px); }}
+            60% {{ transform: translateY(-5px); }}
+        }}
+        
+        h1 {{
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 28px;
+        }}
+        
+        p {{
+            color: #666;
+            margin-bottom: 30px;
+            line-height: 1.6;
+            font-size: 16px;
+        }}
+        
+        .username {{
+            color: #667eea;
+            font-weight: bold;
+        }}
+        
+        .btn {{
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }}
+        
+        .btn:hover {{
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }}
+        
+        .features {{
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 1px solid #eee;
+        }}
+        
+        .features h3 {{
+            color: #333;
+            margin-bottom: 15px;
+        }}
+        
+        .feature-list {{
+            list-style: none;
+            text-align: left;
+        }}
+        
+        .feature-list li {{
+            color: #666;
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }}
+        
+        .feature-list li::before {{
+            content: '✓';
+            color: #4CAF50;
+            position: absolute;
+            left: 0;
+            font-weight: bold;
+        }}
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='success-icon'></div>
+        <h1>Email Confirmed Successfully!</h1>
+        <p>Welcome to ChattingApp, <span class='username'>{username}</span>! Your email has been verified and your account is now active.</p>
+        
+        <a href='{baseUrl}/' class='btn'>Go to Login</a>
+        
+        <div class='features'>
+            <h3>What's Next?</h3>
+            <ul class='feature-list'>
+                <li>Log in to your account</li>
+                <li>Complete your profile</li>
+                <li>Start chatting with other users</li>
+                <li>Upload photos and share moments</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>";
+        }
+
+        private string GetErrorHtml(string title, string message)
+        {
+            var baseUrl = $"{Request.Scheme}://{Request.Host}";
+            return $@"
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>Email Confirmation Error - ChattingApp</title>
+    <style>
+        * {{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }}
+        
+        body {{
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }}
+        
+        .container {{
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 40px;
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+        }}
+        
+        .error-icon {{
+            width: 80px;
+            height: 80px;
+            background: #ff6b6b;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 30px;
+        }}
+        
+        .error-icon::after {{
+            content: '✕';
+            color: white;
+            font-size: 40px;
+            font-weight: bold;
+        }}
+        
+        h1 {{
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 28px;
+        }}
+        
+        p {{
+            color: #666;
+            margin-bottom: 30px;
+            line-height: 1.6;
+            font-size: 16px;
+        }}
+        
+        .btn {{
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }}
+        
+        .btn:hover {{
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(255, 107, 107, 0.3);
+        }}
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='error-icon'></div>
+        <h1>{title}</h1>
+        <p>{message}</p>
+        
+        <a href='{baseUrl}/' class='btn'>Go to Login</a>
+    </div>
+</body>
+</html>";
         }
 
         [HttpPost("ForgotPassword")]
@@ -245,8 +513,9 @@ namespace ChattingApplicationProject.Controllers
             await _emailService.UpdateUser(user);
 
             // Send password reset email
-            var resetLink =
-                $"{Request.Scheme}://{Request.Host}/reset-password?token={user.PasswordResetToken}";
+            var frontendUrl = _configuration["FrontendUrl"] ?? "http://localhost:4200";
+            var encodedToken = Uri.EscapeDataString(user.PasswordResetToken);
+            var resetLink = $"{frontendUrl}/reset-password?token={encodedToken}";
             await _emailService.SendPasswordResetAsync(user.Email!, user.UserName!, resetLink);
 
             return Ok(
@@ -270,12 +539,39 @@ namespace ChattingApplicationProject.Controllers
             if (user.PasswordResetTokenExpiry < DateTime.UtcNow)
                 return BadRequest("Reset token has expired");
 
+            // Check if new password is the same as old password
+            if (user.PasswordSalt != null)
+            {
+                using var hmac = new HMACSHA512(user.PasswordSalt);
+                var computedHash = hmac.ComputeHash(
+                    Encoding.UTF8.GetBytes(resetPasswordDto.NewPassword ?? string.Empty)
+                );
+
+                if (user.PasswordHash != null)
+                {
+                    bool isSamePassword = true;
+                    for (int i = 0; i < computedHash.Length; i++)
+                    {
+                        if (computedHash[i] != user.PasswordHash[i])
+                        {
+                            isSamePassword = false;
+                            break;
+                        }
+                    }
+
+                    if (isSamePassword)
+                        return BadRequest(
+                            "New password cannot be the same as your current password"
+                        );
+                }
+            }
+
             // Update password
-            using var hmac = new HMACSHA512();
-            user.PasswordHash = hmac.ComputeHash(
+            using var newHmac = new HMACSHA512();
+            user.PasswordHash = newHmac.ComputeHash(
                 Encoding.UTF8.GetBytes(resetPasswordDto.NewPassword ?? string.Empty)
             );
-            user.PasswordSalt = hmac.Key;
+            user.PasswordSalt = newHmac.Key;
             user.PasswordResetToken = null;
             user.PasswordResetTokenExpiry = null;
 
@@ -309,9 +605,11 @@ namespace ChattingApplicationProject.Controllers
         }
 
         [HttpPost("ResendConfirmation")]
-        public async Task<IActionResult> ResendConfirmationEmail([FromBody] string email)
+        public async Task<IActionResult> ResendConfirmationEmail(
+            [FromBody] ResendConfirmationDTO resendDto
+        )
         {
-            var user = await _emailService.GetUserByEmail(email);
+            var user = await _emailService.GetUserByEmail(resendDto.Email ?? string.Empty);
 
             if (user == null)
                 return Ok(
@@ -403,6 +701,22 @@ namespace ChattingApplicationProject.Controllers
                     };
                 }
 
+                // Check if a user with the same email already exists
+                var existingUserByEmail = await _emailService.GetUserByEmail(googleLoginDto.Email);
+                if (existingUserByEmail != null)
+                {
+                    // User with this email exists but doesn't have Google ID
+                    // This means they registered with email/password
+                    return BadRequest(
+                        new
+                        {
+                            error = "EMAIL_ALREADY_EXISTS",
+                            message = "An account with this email already exists. Please use your username and password to login, or use a different Google account.",
+                            existingUsername = existingUserByEmail.UserName
+                        }
+                    );
+                }
+
                 // User doesn't exist, create new user
                 var newUser = new AppUser
                 {
@@ -420,7 +734,7 @@ namespace ChattingApplicationProject.Controllers
                     Gender = "Other", // Default gender, user can update later
                     Created = DateTime.Now,
                     LastActive = DateTime.Now,
-                    Role = "Member"
+                    Role = "User"
                 };
 
                 await _userService.AddUser(newUser);
@@ -452,19 +766,31 @@ namespace ChattingApplicationProject.Controllers
                 // Check if user exists with this Google ID
                 var existingUser = await _userService.GetUserByGoogleId(userInfo.Subject);
 
+                // Get frontend URL once
+                var frontendUrl = _configuration["FrontendUrl"] ?? "http://localhost:4200";
+
                 if (existingUser != null)
                 {
                     // User exists, check if banned
                     var isBanned = await _adminService.IsUserBannedAsync(existingUser.Id);
                     if (isBanned)
                     {
-                        return Redirect($"{Request.Scheme}://{Request.Host}/login?error=banned");
+                        return Redirect($"{frontendUrl}/login?error=banned");
                     }
 
                     // Redirect to frontend with success
                     return Redirect(
-                        $"{Request.Scheme}://{Request.Host}/login?google=success&username={existingUser.UserName}"
+                        $"{frontendUrl}/login?google=success&username={existingUser.UserName}"
                     );
+                }
+
+                // Check if a user with the same email already exists
+                var existingUserByEmail = await _emailService.GetUserByEmail(userInfo.Email);
+                if (existingUserByEmail != null)
+                {
+                    // User with this email exists but doesn't have Google ID
+                    // This means they registered with email/password
+                    return Redirect($"{frontendUrl}/login?error=email_exists&username={existingUserByEmail.UserName}");
                 }
 
                 // User doesn't exist, create new user
@@ -484,19 +810,18 @@ namespace ChattingApplicationProject.Controllers
                     Gender = "Other",
                     Created = DateTime.Now,
                     LastActive = DateTime.Now,
-                    Role = "Member"
+                    Role = "User"
                 };
 
                 await _userService.AddUser(newUser);
 
                 // Redirect to frontend with success
-                return Redirect(
-                    $"{Request.Scheme}://{Request.Host}/login?google=success&username={newUser.UserName}"
-                );
+                return Redirect($"{frontendUrl}/login?google=success&username={newUser.UserName}");
             }
             catch (Exception ex)
             {
-                return Redirect($"{Request.Scheme}://{Request.Host}/login?error=google_failed");
+                var frontendUrl = _configuration["FrontendUrl"] ?? "http://localhost:4200";
+                return Redirect($"{frontendUrl}/login?error=google_failed");
             }
         }
 
@@ -504,15 +829,25 @@ namespace ChattingApplicationProject.Controllers
         {
             using var client = new HttpClient();
 
+            var googleSettings = _configuration.GetSection("GoogleSettings").Get<GoogleSettings>();
+            if (
+                googleSettings == null
+                || string.IsNullOrEmpty(googleSettings.ClientId)
+                || string.IsNullOrEmpty(googleSettings.ClientSecret)
+            )
+            {
+                throw new Exception("Google OAuth credentials not configured");
+            }
+
             var tokenRequest = new FormUrlEncodedContent(
                 new[]
                 {
                     new KeyValuePair<string, string>("code", code),
-                    new KeyValuePair<string, string>("client_id", "YOUR_GOOGLE_CLIENT_ID"),
-                    new KeyValuePair<string, string>("client_secret", "YOUR_GOOGLE_CLIENT_SECRET"),
+                    new KeyValuePair<string, string>("client_id", googleSettings.ClientId),
+                    new KeyValuePair<string, string>("client_secret", googleSettings.ClientSecret),
                     new KeyValuePair<string, string>(
                         "redirect_uri",
-                        $"{Request.Scheme}://{Request.Host}/api/Account/GoogleCallback"
+                        $"{Request.Scheme}://{Request.Host}/Account/GoogleCallback"
                     ),
                     new KeyValuePair<string, string>("grant_type", "authorization_code")
                 }
@@ -546,25 +881,6 @@ namespace ChattingApplicationProject.Controllers
             }
 
             return JsonSerializer.Deserialize<GoogleUserInfo>(responseContent);
-        }
-
-        // Helper classes for Google OAuth
-        public class GoogleTokenResponse
-        {
-            public string? AccessToken { get; set; }
-            public string? TokenType { get; set; }
-            public int ExpiresIn { get; set; }
-            public string? RefreshToken { get; set; }
-        }
-
-        public class GoogleUserInfo
-        {
-            public string? Subject { get; set; }
-            public string? Email { get; set; }
-            public string? Name { get; set; }
-            public string? Picture { get; set; }
-            public string? GivenName { get; set; }
-            public string? FamilyName { get; set; }
         }
     }
 }

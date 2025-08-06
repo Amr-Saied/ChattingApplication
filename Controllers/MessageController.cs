@@ -4,6 +4,7 @@ using ChattingApplicationProject.DTO;
 using ChattingApplicationProject.Hubs;
 using ChattingApplicationProject.Interfaces;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 
@@ -15,11 +16,17 @@ namespace ChattingApplicationProject.Controllers
     public class MessageController : ControllerBase
     {
         private readonly IMessageService _messageService;
+        private readonly IVoiceService _voiceService;
         private readonly IHubContext<MessageHub> _hubContext;
 
-        public MessageController(IMessageService messageService, IHubContext<MessageHub> hubContext)
+        public MessageController(
+            IMessageService messageService,
+            IVoiceService voiceService,
+            IHubContext<MessageHub> hubContext
+        )
         {
             _messageService = messageService;
+            _voiceService = voiceService;
             _hubContext = hubContext;
         }
 
@@ -90,6 +97,68 @@ namespace ChattingApplicationProject.Controllers
             catch (ArgumentException ex)
             {
                 return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpPost("voice")]
+        public async Task<IActionResult> SendVoiceMessage(
+            [FromForm] CreateVoiceMessageDto voiceMessageDto
+        )
+        {
+            var currentUserId = GetCurrentUserId();
+            if (currentUserId == 0)
+                return Unauthorized();
+
+            if (voiceMessageDto.VoiceFile == null || voiceMessageDto.VoiceFile.Length == 0)
+                return BadRequest("Voice file is required");
+
+            try
+            {
+                // Upload voice file to Cloudinary
+                var voiceUrl = await _voiceService.UploadVoiceAsync(voiceMessageDto.VoiceFile);
+                if (string.IsNullOrEmpty(voiceUrl))
+                    return BadRequest("Failed to upload voice file");
+
+                // Send voice message
+                var message = await _messageService.SendVoiceMessage(
+                    currentUserId,
+                    voiceMessageDto.RecipientId,
+                    voiceUrl,
+                    voiceMessageDto.Duration
+                );
+
+                // Notify the recipient via SignalR
+                await _hubContext
+                    .Clients.User(message.RecipientId.ToString())
+                    .SendAsync(
+                        "ReceiveMessage",
+                        new
+                        {
+                            Id = message.Id,
+                            SenderId = message.SenderId,
+                            SenderUsername = message.SenderUsername,
+                            SenderPhotoUrl = message.SenderPhotoUrl,
+                            RecipientId = message.RecipientId,
+                            RecipientUsername = message.RecipientUsername,
+                            RecipientPhotoUrl = message.RecipientPhotoUrl,
+                            Content = message.Content,
+                            VoiceUrl = message.VoiceUrl,
+                            VoiceDuration = message.VoiceDuration,
+                            MessageType = message.MessageType,
+                            MessageSent = message.MessageSent,
+                            DateRead = message.DateRead
+                        }
+                    );
+
+                return Ok(message);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "An error occurred while processing the voice message");
             }
         }
 

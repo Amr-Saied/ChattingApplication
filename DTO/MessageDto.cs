@@ -13,6 +13,9 @@ namespace ChattingApplicationProject.DTO
         public string RecipientPhotoUrl { get; set; }
         public string Content { get; set; }
         public string Emoji { get; set; }
+        public string VoiceUrl { get; set; }
+        public int? VoiceDuration { get; set; }
+        public string MessageType { get; set; }
         public DateTime MessageSent { get; set; }
         public DateTime? DateRead { get; set; }
     }
