@@ -254,5 +254,44 @@ namespace ChattingApplicationProject.Services
                 message = "Automatic cleanup runs every 24 hours. Expired users are deleted after 7 days."
             };
         }
+
+        public async Task<bool> UpdateUser(AppUser user)
+        {
+            try
+            {
+                var userToUpdate = await _context.Users.FindAsync(user.Id);
+                if (userToUpdate != null)
+                {
+                    _context.Entry(userToUpdate).CurrentValues.SetValues(user);
+                    await _context.SaveChangesAsync();
+                    return true;
+                }
+                return false;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public async Task<bool> UpdateUsername(string currentUsername, string newUsername)
+        {
+            try
+            {
+                var user = await _context.Users.FirstOrDefaultAsync(u =>
+                    u.UserName == currentUsername.ToLower()
+                );
+                if (user == null)
+                    return false;
+
+                user.UserName = newUsername.ToLower();
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
     }
 }

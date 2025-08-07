@@ -652,12 +652,12 @@ namespace ChattingApplicationProject.Controllers
         {
             try
             {
-                // Check if user exists with this Google ID
+                // First, check if user exists with this Google ID (existing Google user)
                 var existingUser = await _userService.GetUserByGoogleId(googleLoginDto.GoogleId);
 
                 if (existingUser != null)
                 {
-                    // User exists, check if banned
+                    // User exists with this Google ID, check if banned
                     var isBanned = await _adminService.IsUserBannedAsync(existingUser.Id);
                     if (isBanned)
                     {
@@ -693,6 +693,10 @@ namespace ChattingApplicationProject.Controllers
                         }
                     }
 
+                    // Update last active time
+                    existingUser.LastActive = DateTime.Now;
+                    await _userService.UpdateUser(existingUser);
+
                     return new UserDTO
                     {
                         Username = existingUser.UserName,
@@ -701,7 +705,7 @@ namespace ChattingApplicationProject.Controllers
                     };
                 }
 
-                // Check if a user with the same email already exists
+                // Check if a user with the same email already exists (regular user with password)
                 var existingUserByEmail = await _emailService.GetUserByEmail(googleLoginDto.Email);
                 if (existingUserByEmail != null)
                 {
@@ -717,13 +721,10 @@ namespace ChattingApplicationProject.Controllers
                     );
                 }
 
-                // User doesn't exist, create new user
+                // User doesn't exist, create new Google user
                 var newUser = new AppUser
                 {
-                    UserName =
-                        googleLoginDto.Email?.Split('@')[0]
-                        + "_"
-                        + Guid.NewGuid().ToString().Substring(0, 8),
+                    UserName = GenerateUniqueUsername(googleLoginDto.Email),
                     Email = googleLoginDto.Email,
                     GoogleId = googleLoginDto.GoogleId,
                     ProfilePictureUrl = googleLoginDto.Picture,
@@ -750,6 +751,23 @@ namespace ChattingApplicationProject.Controllers
             {
                 return BadRequest($"Google login failed: {ex.Message}");
             }
+        }
+
+        // Helper method to generate unique username
+        private string GenerateUniqueUsername(string email)
+        {
+            var baseUsername = email.Split('@')[0];
+            var username = baseUsername;
+            var counter = 1;
+
+            // Keep trying until we find a unique username
+            while (_userService.UserExists(username).Result)
+            {
+                username = $"{baseUsername}_{counter}";
+                counter++;
+            }
+
+            return username;
         }
 
         [HttpGet("GoogleCallback")]
@@ -790,7 +808,9 @@ namespace ChattingApplicationProject.Controllers
                 {
                     // User with this email exists but doesn't have Google ID
                     // This means they registered with email/password
-                    return Redirect($"{frontendUrl}/login?error=email_exists&username={existingUserByEmail.UserName}");
+                    return Redirect(
+                        $"{frontendUrl}/login?error=email_exists&username={existingUserByEmail.UserName}"
+                    );
                 }
 
                 // User doesn't exist, create new user
@@ -881,6 +901,45 @@ namespace ChattingApplicationProject.Controllers
             }
 
             return JsonSerializer.Deserialize<GoogleUserInfo>(responseContent);
+        }
+
+        [HttpGet("CheckUsernameAvailability/{username}")]
+        public async Task<ActionResult<object>> CheckUsernameAvailability(string username)
+        {
+            if (string.IsNullOrWhiteSpace(username))
+                return BadRequest("Username cannot be empty");
+
+            var isTaken = await _userService.UserExists(username);
+            return Ok(new { isAvailable = !isTaken, username = username });
+        }
+
+        [HttpPost("UpdateUsername")]
+        public async Task<ActionResult<object>> UpdateUsername(
+            [FromBody] UpdateUsernameDTO updateUsernameDto
+        )
+        {
+            if (string.IsNullOrWhiteSpace(updateUsernameDto.NewUsername))
+                return BadRequest("Username cannot be empty");
+
+            // Check if the new username is already taken
+            if (await _userService.UserExists(updateUsernameDto.NewUsername))
+                return BadRequest("Username is already taken");
+
+            // Update the username using the service
+            var success = await _userService.UpdateUsername(
+                updateUsernameDto.CurrentUsername,
+                updateUsernameDto.NewUsername
+            );
+            if (!success)
+                return NotFound("User not found");
+
+            return Ok(
+                new
+                {
+                    message = "Username updated successfully",
+                    newUsername = updateUsernameDto.NewUsername.ToLower()
+                }
+            );
         }
     }
 }

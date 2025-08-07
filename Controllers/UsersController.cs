@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using AutoMapper;
@@ -6,6 +7,7 @@ using ChattingApplicationProject.Helpers;
 using ChattingApplicationProject.Interfaces;
 using ChattingApplicationProject.Models;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ChattingApplicationProject.Controllers
@@ -55,7 +57,19 @@ namespace ChattingApplicationProject.Controllers
         [HttpGet("GetUserByUsername/{username}")]
         public async Task<ActionResult<MemeberDTO>> GetUserByUsername(string username)
         {
-            return Ok(await _userService.GetUserByUsernameDTO(username));
+            try
+            {
+                var member = await _userService.GetUserByUsernameDTO(username);
+                if (member == null)
+                {
+                    return NotFound($"User with username '{username}' not found.");
+                }
+                return Ok(member);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error retrieving user: {ex.Message}");
+            }
         }
 
         [HttpPut("UpdateUser/{id}")]

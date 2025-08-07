@@ -24,5 +24,7 @@ namespace ChattingApplicationProject.Interfaces
         string GetLastActiveStatus(DateTime lastActive);
         Task<AppUser?> GetUserByGoogleId(string? googleId);
         Task<object> GetUnconfirmedUsersCountAsync();
+        Task<bool> UpdateUser(AppUser user);
+        Task<bool> UpdateUsername(string currentUsername, string newUsername);
     }
 }
