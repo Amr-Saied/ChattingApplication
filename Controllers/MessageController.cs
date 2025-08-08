@@ -177,19 +177,9 @@ namespace ChattingApplicationProject.Controllers
                 var message = await _messageService.GetMessage(messageId);
                 if (message != null)
                 {
-                    Console.WriteLine(
-                        $"🔔 Backend: Sending MessageRead SignalR to user {message.SenderId} for message {messageId} from reader {currentUserId}"
-                    );
                     await _hubContext
                         .Clients.User(message.SenderId.ToString())
                         .SendAsync("MessageRead", messageId, currentUserId);
-                    Console.WriteLine($"✅ Backend: MessageRead SignalR sent successfully");
-                }
-                else
-                {
-                    Console.WriteLine(
-                        $"❌ Backend: Message {messageId} not found for SignalR notification"
-                    );
                 }
                 return Ok(new { success = true });
             }
