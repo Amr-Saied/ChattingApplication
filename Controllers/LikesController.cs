@@ -1,3 +1,4 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using ChattingApplicationProject.Interfaces;
@@ -106,7 +107,10 @@ namespace ChattingApplicationProject.Controllers
 
         private int GetCurrentUserId()
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            // Try both claim types since JWT uses NameId but some systems expect NameIdentifier
+            var userIdClaim =
+                User.FindFirst(JwtRegisteredClaimNames.NameId)?.Value
+                ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             return int.TryParse(userIdClaim, out int userId) ? userId : 0;
         }
     }

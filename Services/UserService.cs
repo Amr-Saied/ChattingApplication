@@ -49,6 +49,11 @@ namespace ChattingApplicationProject.Services
             return _mapper.Map<MemeberDTO>(user);
         }
 
+        public async Task<AppUser> GetUserById(int id)
+        {
+            return await _context.Users.Include(u => u.Photos).FirstOrDefaultAsync(x => x.Id == id);
+        }
+
         public async Task<AppUser> GetUserByUsername(string username)
         {
             return await _context

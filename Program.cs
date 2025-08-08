@@ -72,8 +72,10 @@ builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IUserCleanupService, UserCleanupService>();
 
+builder.Services.AddScoped<ISessionService, SessionService>();
+
 // Add Background Cleanup Service
-builder.Services.AddHostedService<BackgroundCleanupService>();
+builder.Services.AddHostedService<UserCleanupService>();
 
 // Add SignalR
 builder.Services.AddSignalR();

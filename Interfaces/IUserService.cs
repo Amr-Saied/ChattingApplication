@@ -13,6 +13,7 @@ namespace ChattingApplicationProject.Interfaces
         Task<AppUser> AddUser(AppUser user);
         Task<IEnumerable<MemeberDTO>> GetUsersDTO();
         Task<MemeberDTO> GetUserByIdDTO(int id);
+        Task<AppUser> GetUserById(int id);
         Task<AppUser> GetUserByUsername(string username);
         Task<MemeberDTO> GetUserByUsernameDTO(string username);
         Task<MemeberDTO> UpdateUserDTO(int id, MemeberDTO user);

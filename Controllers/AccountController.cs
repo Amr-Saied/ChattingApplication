@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using AutoMapper;
+using ChattingApplicationProject.Data;
 using ChattingApplicationProject.DTO;
 using ChattingApplicationProject.Helpers.helperClasses;
 using ChattingApplicationProject.Interfaces;
@@ -22,6 +23,7 @@ namespace ChattingApplicationProject.Controllers
         private readonly IAdminService _adminService;
         private readonly IEmailService _emailService;
         private readonly IConfiguration _configuration;
+        private readonly ISessionService _sessionService;
 
         public AccountController(
             IUserService userService,
@@ -29,7 +31,8 @@ namespace ChattingApplicationProject.Controllers
             IMapper mapper,
             IAdminService adminService,
             IEmailService emailService,
-            IConfiguration configuration
+            IConfiguration configuration,
+            ISessionService sessionService
         )
         {
             _userService = userService;
@@ -38,6 +41,7 @@ namespace ChattingApplicationProject.Controllers
             _adminService = adminService;
             _emailService = emailService;
             _configuration = configuration;
+            _sessionService = sessionService;
         }
 
         [HttpPost("Register")]
@@ -157,11 +161,32 @@ namespace ChattingApplicationProject.Controllers
                 }
             }
 
+            // Create tokens
+            var accessToken = _tokenService.CreateToken(user);
+            var refreshToken = _tokenService.CreateRefreshToken(user);
+
+            // Get client information
+            var clientDeviceInfo = Request.Headers["User-Agent"].ToString();
+            var clientIpAddress =
+                Request.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
+
+            // Create new session
+            await _sessionService.CreateSessionAsync(
+                user.Id,
+                accessToken,
+                refreshToken,
+                clientDeviceInfo,
+                clientIpAddress
+            );
+
             return new UserDTO
             {
                 Username = user.UserName,
-                Token = _tokenService.CreateToken(user),
-                Role = user.Role
+                Token = accessToken,
+                RefreshToken = refreshToken,
+                Role = user.Role,
+                TokenExpires = DateTime.Now.AddMinutes(15),
+                RefreshTokenExpires = DateTime.Now.AddDays(7)
             };
         }
 
@@ -940,6 +965,108 @@ namespace ChattingApplicationProject.Controllers
                     newUsername = updateUsernameDto.NewUsername.ToLower()
                 }
             );
+        }
+
+        [HttpPost("Logout")]
+        public async Task<ActionResult> Logout()
+        {
+            try
+            {
+                // Get the authorization header
+                var authHeader = Request.Headers["Authorization"].FirstOrDefault();
+                if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer "))
+                {
+                    return Unauthorized("No valid token provided");
+                }
+
+                var token = authHeader.Substring("Bearer ".Length);
+
+                // Get user ID from token
+                var userId = _tokenService.GetUserIdFromToken(token);
+                if (userId == null)
+                {
+                    return Unauthorized("Invalid token");
+                }
+
+                // Invalidate all sessions for this user
+                await _sessionService.InvalidateUserSessionsAsync(userId.Value);
+
+                return Ok(new { message = "Logged out successfully" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = "Error during logout", error = ex.Message });
+            }
+        }
+
+        [HttpPost("RefreshToken")]
+        public async Task<ActionResult<UserDTO>> RefreshToken(
+            [FromBody] RefreshTokenDto refreshTokenDto
+        )
+        {
+            try
+            {
+                // Validate refresh token
+                var principal = _tokenService.ValidateRefreshToken(refreshTokenDto.RefreshToken);
+                if (principal == null)
+                {
+                    return Unauthorized("Invalid refresh token");
+                }
+
+                // Get user ID from refresh token
+                var userId = _tokenService.GetUserIdFromToken(refreshTokenDto.RefreshToken);
+                if (userId == null)
+                {
+                    return Unauthorized("Invalid user in refresh token");
+                }
+
+                // Get user from database
+                var user = await _userService.GetUserById(userId.Value);
+                if (user == null)
+                {
+                    return Unauthorized("User not found");
+                }
+
+                // Check if user is banned
+                var isBanned = await _adminService.IsUserBannedAsync(user.Id);
+                if (isBanned)
+                {
+                    return Unauthorized("User account is banned");
+                }
+
+                // Create new tokens
+                var newAccessToken = _tokenService.CreateToken(user);
+                var newRefreshToken = _tokenService.CreateRefreshToken(user);
+
+                // Find the existing session by refresh token
+                var existingSession = await _sessionService.GetSessionByRefreshToken(
+                    refreshTokenDto.RefreshToken
+                );
+
+                if (existingSession != null)
+                {
+                    existingSession.SessionToken = newAccessToken;
+                    existingSession.RefreshToken = newRefreshToken;
+                    existingSession.LastActivity = DateTime.UtcNow;
+
+                    // Save the updated session
+                    await _sessionService.UpdateSessionTokensAsync(existingSession);
+                }
+
+                return new UserDTO
+                {
+                    Username = user.UserName,
+                    Token = newAccessToken,
+                    RefreshToken = newRefreshToken,
+                    Role = user.Role,
+                    TokenExpires = DateTime.Now.AddMinutes(15),
+                    RefreshTokenExpires = DateTime.Now.AddDays(7)
+                };
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error refreshing token: {ex.Message}");
+            }
         }
     }
 }

@@ -225,7 +225,10 @@ namespace ChattingApplicationProject.Models
         public async Task<int> GetUnreadCount(int currentUserId)
         {
             return await _context.Messages.CountAsync(m =>
-                m.RecipientId == currentUserId && m.DateRead == null && !m.SenderDeleted && !m.RecipientDeleted
+                m.RecipientId == currentUserId
+                && m.DateRead == null
+                && !m.SenderDeleted
+                && !m.RecipientDeleted
             );
         }
 

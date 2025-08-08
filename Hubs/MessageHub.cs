@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using ChattingApplicationProject.Data;
 using Microsoft.AspNetCore.Authorization;
@@ -359,7 +360,10 @@ namespace ChattingApplicationProject.Hubs
 
         private int GetCurrentUserId()
         {
-            var userIdClaim = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            // Try both claim types since JWT uses NameId but some systems expect NameIdentifier
+            var userIdClaim =
+                Context.User?.FindFirst(JwtRegisteredClaimNames.NameId)?.Value
+                ?? Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             return int.TryParse(userIdClaim, out int userId) ? userId : 0;
         }
 
