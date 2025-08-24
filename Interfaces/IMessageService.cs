@@ -17,6 +17,14 @@ namespace ChattingApplicationProject.Interfaces
         // Send a message
         Task<MessageDto> SendMessage(int senderId, int recipientId, string content, string emoji);
 
+        // Send a voice message
+        Task<MessageDto> SendVoiceMessage(
+            int senderId,
+            int recipientId,
+            string voiceUrl,
+            int duration
+        );
+
         // Mark message as read
         Task<bool> MarkAsRead(int messageId, int currentUserId);
 

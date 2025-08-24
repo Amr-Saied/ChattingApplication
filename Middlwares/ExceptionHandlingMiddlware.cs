@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using ChattingApplicationProject.Errors;
+using ChattingApplicationProject.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -27,8 +28,22 @@ namespace ChattingApplicationProject.Middlwares
             _env = env;
         }
 
-        public async Task InvokeAsync(HttpContext context)
+        public async Task InvokeAsync(HttpContext context, ISessionService sessionService)
         {
+            // Best-effort: update session activity if authenticated
+            try
+            {
+                var authHeader = context.Request.Headers["Authorization"].FirstOrDefault();
+                if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer "))
+                {
+                    var token = authHeader.Substring("Bearer ".Length);
+                    await sessionService.UpdateSessionActivityAsync(token);
+                }
+            }
+            catch
+            { /* ignore */
+            }
+
             try
             {
                 await _next(context);

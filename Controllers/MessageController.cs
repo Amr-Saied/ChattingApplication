@@ -1,9 +1,11 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using ChattingApplicationProject.DTO;
 using ChattingApplicationProject.Hubs;
 using ChattingApplicationProject.Interfaces;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 
@@ -15,11 +17,17 @@ namespace ChattingApplicationProject.Controllers
     public class MessageController : ControllerBase
     {
         private readonly IMessageService _messageService;
+        private readonly IVoiceService _voiceService;
         private readonly IHubContext<MessageHub> _hubContext;
 
-        public MessageController(IMessageService messageService, IHubContext<MessageHub> hubContext)
+        public MessageController(
+            IMessageService messageService,
+            IVoiceService voiceService,
+            IHubContext<MessageHub> hubContext
+        )
         {
             _messageService = messageService;
+            _voiceService = voiceService;
             _hubContext = hubContext;
         }
 
@@ -93,6 +101,68 @@ namespace ChattingApplicationProject.Controllers
             }
         }
 
+        [HttpPost("voice")]
+        public async Task<IActionResult> SendVoiceMessage(
+            [FromForm] CreateVoiceMessageDto voiceMessageDto
+        )
+        {
+            var currentUserId = GetCurrentUserId();
+            if (currentUserId == 0)
+                return Unauthorized();
+
+            if (voiceMessageDto.VoiceFile == null || voiceMessageDto.VoiceFile.Length == 0)
+                return BadRequest("Voice file is required");
+
+            try
+            {
+                // Upload voice file to Cloudinary
+                var voiceUrl = await _voiceService.UploadVoiceAsync(voiceMessageDto.VoiceFile);
+                if (string.IsNullOrEmpty(voiceUrl))
+                    return BadRequest("Failed to upload voice file");
+
+                // Send voice message
+                var message = await _messageService.SendVoiceMessage(
+                    currentUserId,
+                    voiceMessageDto.RecipientId,
+                    voiceUrl,
+                    voiceMessageDto.Duration
+                );
+
+                // Notify the recipient via SignalR
+                await _hubContext
+                    .Clients.User(message.RecipientId.ToString())
+                    .SendAsync(
+                        "ReceiveMessage",
+                        new
+                        {
+                            Id = message.Id,
+                            SenderId = message.SenderId,
+                            SenderUsername = message.SenderUsername,
+                            SenderPhotoUrl = message.SenderPhotoUrl,
+                            RecipientId = message.RecipientId,
+                            RecipientUsername = message.RecipientUsername,
+                            RecipientPhotoUrl = message.RecipientPhotoUrl,
+                            Content = message.Content,
+                            VoiceUrl = message.VoiceUrl,
+                            VoiceDuration = message.VoiceDuration,
+                            MessageType = message.MessageType,
+                            MessageSent = message.MessageSent,
+                            DateRead = message.DateRead
+                        }
+                    );
+
+                return Ok(message);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "An error occurred while processing the voice message");
+            }
+        }
+
         [HttpPut("{messageId}/read")]
         public async Task<IActionResult> MarkAsRead(int messageId)
         {
@@ -107,19 +177,9 @@ namespace ChattingApplicationProject.Controllers
                 var message = await _messageService.GetMessage(messageId);
                 if (message != null)
                 {
-                    Console.WriteLine(
-                        $"🔔 Backend: Sending MessageRead SignalR to user {message.SenderId} for message {messageId} from reader {currentUserId}"
-                    );
                     await _hubContext
                         .Clients.User(message.SenderId.ToString())
                         .SendAsync("MessageRead", messageId, currentUserId);
-                    Console.WriteLine($"✅ Backend: MessageRead SignalR sent successfully");
-                }
-                else
-                {
-                    Console.WriteLine(
-                        $"❌ Backend: Message {messageId} not found for SignalR notification"
-                    );
                 }
                 return Ok(new { success = true });
             }
@@ -173,7 +233,10 @@ namespace ChattingApplicationProject.Controllers
 
         private int GetCurrentUserId()
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            // Try both claim types since JWT uses NameId but some systems expect NameIdentifier
+            var userIdClaim =
+                User.FindFirst(JwtRegisteredClaimNames.NameId)?.Value
+                ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             return int.TryParse(userIdClaim, out int userId) ? userId : 0;
         }
     }

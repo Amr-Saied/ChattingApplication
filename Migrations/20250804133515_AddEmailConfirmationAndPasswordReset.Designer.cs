@@ -4,6 +4,7 @@ using ChattingApplicationProject.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ChattingApplicationProject.Migrations
 {
     [DbContext(typeof(DataContext))]
-    partial class DataContextModelSnapshot : ModelSnapshot
+    [Migration("20250804133515_AddEmailConfirmationAndPasswordReset")]
+    partial class AddEmailConfirmationAndPasswordReset
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -141,10 +144,6 @@ namespace ChattingApplicationProject.Migrations
                     b.Property<DateTime>("MessageSent")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("MessageType")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<bool>("RecipientDeleted")
                         .HasColumnType("bit");
 
@@ -163,12 +162,6 @@ namespace ChattingApplicationProject.Migrations
 
                     b.Property<string>("SenderUsername")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int?>("VoiceDuration")
-                        .HasColumnType("int");
-
-                    b.Property<string>("VoiceUrl")
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
@@ -229,56 +222,6 @@ namespace ChattingApplicationProject.Migrations
                     b.ToTable("UserLikes");
                 });
 
-            modelBuilder.Entity("ChattingApplicationProject.Models.UserSession", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("DeviceInfo")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<DateTime>("ExpiresAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("IpAddress")
-                        .IsRequired()
-                        .HasMaxLength(45)
-                        .HasColumnType("nvarchar(45)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime>("LastActivity")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("RefreshToken")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<string>("SessionToken")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("UserSessions");
-                });
-
             modelBuilder.Entity("ChattingApplicationProject.Models.Message", b =>
                 {
                     b.HasOne("ChattingApplicationProject.Models.AppUser", "Recipient")
@@ -326,17 +269,6 @@ namespace ChattingApplicationProject.Migrations
                     b.Navigation("LikedUser");
 
                     b.Navigation("SourceUser");
-                });
-
-            modelBuilder.Entity("ChattingApplicationProject.Models.UserSession", b =>
-                {
-                    b.HasOne("ChattingApplicationProject.Models.AppUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("ChattingApplicationProject.Models.AppUser", b =>

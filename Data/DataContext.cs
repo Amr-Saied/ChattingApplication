@@ -16,6 +16,7 @@ namespace ChattingApplicationProject.Data
         public DbSet<Photo> Photos { get; set; }
         public DbSet<UserLike> UserLikes { get; set; }
         public DbSet<Message> Messages { get; set; }
+        public DbSet<UserSession> UserSessions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -63,6 +64,36 @@ namespace ChattingApplicationProject.Data
                 .WithMany(m => m.MessagesReceived)
                 .HasForeignKey(r => r.RecipientId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // UserSession Configuration
+            modelBuilder.Entity<UserSession>().HasKey(s => s.Id);
+            modelBuilder
+                .Entity<UserSession>()
+                .Property(s => s.SessionToken)
+                .IsRequired()
+                .HasMaxLength(1000);
+            modelBuilder
+                .Entity<UserSession>()
+                .Property(s => s.RefreshToken)
+                .IsRequired()
+                .HasMaxLength(1000);
+            modelBuilder
+                .Entity<UserSession>()
+                .Property(s => s.DeviceInfo)
+                .IsRequired()
+                .HasMaxLength(500);
+            modelBuilder
+                .Entity<UserSession>()
+                .Property(s => s.IpAddress)
+                .IsRequired()
+                .HasMaxLength(45);
+
+            modelBuilder
+                .Entity<UserSession>()
+                .HasOne(s => s.User)
+                .WithMany()
+                .HasForeignKey(s => s.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

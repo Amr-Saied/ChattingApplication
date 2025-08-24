@@ -41,15 +41,11 @@ namespace ChattingApplicationProject.Helpers
                                 // Update LastActive
                                 appUser.LastActive = DateTime.Now;
                                 await _userService.UpdateUserLastActive(appUser);
-
-                                // Log the activity
-                                Console.WriteLine($"User {username} was active at {DateTime.Now}");
                             }
                         }
                         catch (Exception ex)
                         {
-                            // Log error but don't break the action
-                            Console.WriteLine($"Error updating user activity: {ex.Message}");
+                            // Log error silently for production
                         }
                     }
                 }

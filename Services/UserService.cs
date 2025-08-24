@@ -49,6 +49,11 @@ namespace ChattingApplicationProject.Services
             return _mapper.Map<MemeberDTO>(user);
         }
 
+        public async Task<AppUser> GetUserById(int id)
+        {
+            return await _context.Users.Include(u => u.Photos).FirstOrDefaultAsync(x => x.Id == id);
+        }
+
         public async Task<AppUser> GetUserByUsername(string username)
         {
             return await _context
@@ -224,6 +229,73 @@ namespace ChattingApplicationProject.Services
             {
                 var years = (int)(timeSpan.TotalDays / 365);
                 return years == 1 ? "1 year ago" : $"{years} years ago";
+            }
+        }
+
+        public async Task<AppUser?> GetUserByGoogleId(string? googleId)
+        {
+            if (string.IsNullOrEmpty(googleId))
+                return null;
+
+            return await _context
+                .Users.Include(u => u.Photos)
+                .FirstOrDefaultAsync(u => u.GoogleId == googleId);
+        }
+
+        public async Task<object> GetUnconfirmedUsersCountAsync()
+        {
+            var unconfirmedCount = await _context.Users.Where(u => !u.EmailConfirmed).CountAsync();
+
+            var expiredCount = await _context
+                .Users.Where(u =>
+                    !u.EmailConfirmed && u.EmailConfirmationTokenExpiry < DateTime.UtcNow
+                )
+                .CountAsync();
+
+            return new
+            {
+                totalUnconfirmed = unconfirmedCount,
+                expiredUnconfirmed = expiredCount,
+                message = "Automatic cleanup runs every 24 hours. Expired users are deleted after 7 days."
+            };
+        }
+
+        public async Task<bool> UpdateUser(AppUser user)
+        {
+            try
+            {
+                var userToUpdate = await _context.Users.FindAsync(user.Id);
+                if (userToUpdate != null)
+                {
+                    _context.Entry(userToUpdate).CurrentValues.SetValues(user);
+                    await _context.SaveChangesAsync();
+                    return true;
+                }
+                return false;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public async Task<bool> UpdateUsername(string currentUsername, string newUsername)
+        {
+            try
+            {
+                var user = await _context.Users.FirstOrDefaultAsync(u =>
+                    u.UserName == currentUsername.ToLower()
+                );
+                if (user == null)
+                    return false;
+
+                user.UserName = newUsername.ToLower();
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch
+            {
+                return false;
             }
         }
     }

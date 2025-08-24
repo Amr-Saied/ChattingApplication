@@ -1,8 +1,10 @@
 using AutoMapper;
 using ChattingApplicationProject.Data;
 using ChattingApplicationProject.DTO;
+using ChattingApplicationProject.Hubs;
 using ChattingApplicationProject.Interfaces;
 using ChattingApplicationProject.Models;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace ChattingApplicationProject.Services
@@ -11,11 +13,13 @@ namespace ChattingApplicationProject.Services
     {
         private readonly DataContext _context;
         private readonly IMapper _mapper;
+        private readonly IHubContext<MessageHub> _hubContext;
 
-        public AdminService(DataContext context, IMapper mapper)
+        public AdminService(DataContext context, IMapper mapper, IHubContext<MessageHub> hubContext)
         {
             _context = context;
             _mapper = mapper;
+            _hubContext = hubContext;
         }
 
         public async Task<PagedResult<AdminUserResponseDTO>> GetAllUsersForAdminAsync(
@@ -166,6 +170,27 @@ namespace ChattingApplicationProject.Services
             try
             {
                 await _context.SaveChangesAsync();
+
+                // Build complete ban message (same format as HTTP response)
+                var banMessage = "Your account has been banned.";
+                if (!string.IsNullOrEmpty(user.BanReason))
+                {
+                    banMessage += $" Reason: {user.BanReason}";
+                }
+                if (!user.IsPermanentBan && user.BanExpiryDate.HasValue)
+                {
+                    banMessage +=
+                        $" Your ban expires on: {user.BanExpiryDate.Value.ToString("MM/dd/yyyy hh:mm tt")}";
+                }
+                banMessage += " Please contact an administrator for more information.";
+
+                // Send real-time ban notification to the user with complete message
+                await _hubContext.Clients.All.SendAsync(
+                    "UserBanned",
+                    user.Id,
+                    banMessage,
+                    user.IsPermanentBan
+                );
                 return true;
             }
             catch
@@ -188,6 +213,8 @@ namespace ChattingApplicationProject.Services
             try
             {
                 await _context.SaveChangesAsync();
+                // Send real-time unban notification to the user
+                await _hubContext.Clients.All.SendAsync("UserUnbanned", userId);
                 return true;
             }
             catch

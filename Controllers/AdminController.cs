@@ -11,10 +11,12 @@ namespace ChattingApplicationProject.Controllers
     public class AdminController : ControllerBase
     {
         private readonly IAdminService _adminService;
+        private readonly IUserService _userService;
 
-        public AdminController(IAdminService adminService)
+        public AdminController(IAdminService adminService, IUserService userService)
         {
             _adminService = adminService;
+            _userService = userService;
         }
 
         [HttpGet("GetAllUsers")]
@@ -22,15 +24,8 @@ namespace ChattingApplicationProject.Controllers
             [FromQuery] PaginationParams paginationParams
         )
         {
-            try
-            {
-                var users = await _adminService.GetAllUsersForAdminAsync(paginationParams);
-                return Ok(users);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest($"Error retrieving users: {ex.Message}");
-            }
+            var users = await _adminService.GetAllUsersForAdminAsync(paginationParams);
+            return Ok(users);
         }
 
         [HttpGet("SearchUsers")]
@@ -38,32 +33,18 @@ namespace ChattingApplicationProject.Controllers
             [FromQuery] string searchTerm
         )
         {
-            try
-            {
-                var users = await _adminService.SearchUsersForAdminAsync(searchTerm);
-                return Ok(users);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest($"Error searching users: {ex.Message}");
-            }
+            var users = await _adminService.SearchUsersForAdminAsync(searchTerm);
+            return Ok(users);
         }
 
         [HttpGet("GetUser/{userId}")]
         public async Task<ActionResult<AdminUserResponseDTO>> GetUser(int userId)
         {
-            try
-            {
-                var user = await _adminService.GetUserForAdminAsync(userId);
-                if (user == null)
-                    return NotFound("User not found");
+            var user = await _adminService.GetUserForAdminAsync(userId);
+            if (user == null)
+                return NotFound("User not found");
 
-                return Ok(user);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest($"Error retrieving user: {ex.Message}");
-            }
+            return Ok(user);
         }
 
         [HttpPut("EditUser/{userId}")]
@@ -72,109 +53,81 @@ namespace ChattingApplicationProject.Controllers
             [FromBody] AdminEditUserDTO editUserDto
         )
         {
-            try
-            {
-                if (editUserDto == null)
-                    return BadRequest("Invalid user data");
+            if (editUserDto == null)
+                return BadRequest("Invalid user data");
 
-                var updatedUser = await _adminService.EditUserAsync(userId, editUserDto);
-                if (updatedUser == null)
-                    return NotFound("User not found or update failed");
+            var updatedUser = await _adminService.EditUserAsync(userId, editUserDto);
+            if (updatedUser == null)
+                return NotFound("User not found or update failed");
 
-                return Ok(updatedUser);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest($"Error updating user: {ex.Message}");
-            }
+            return Ok(updatedUser);
         }
 
         [HttpPost("BanUser/{userId}")]
         public async Task<ActionResult> BanUser(int userId, [FromBody] AdminBanUserDTO banDto)
         {
-            try
-            {
-                if (banDto == null)
-                    return BadRequest("Invalid ban data");
+            if (banDto == null)
+                return BadRequest("Invalid ban data");
 
-                // Validate ban data
-                if (!banDto.IsPermanentBan && !banDto.BanExpiryDate.HasValue)
-                    return BadRequest("Temporary ban must have an expiry date");
+            // Validate ban data
+            if (!banDto.IsPermanentBan && !banDto.BanExpiryDate.HasValue)
+                return BadRequest("Temporary ban must have an expiry date");
 
-                if (banDto.IsPermanentBan && banDto.BanExpiryDate.HasValue)
-                    return BadRequest("Permanent ban should not have an expiry date");
+            if (banDto.IsPermanentBan && banDto.BanExpiryDate.HasValue)
+                return BadRequest("Permanent ban should not have an expiry date");
 
-                var result = await _adminService.BanUserAsync(userId, banDto);
-                if (!result)
-                    return NotFound("User not found or ban failed");
+            var result = await _adminService.BanUserAsync(userId, banDto);
+            if (!result)
+                return NotFound("User not found or ban failed");
 
-                return Ok(new { message = "User banned successfully" });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest($"Error banning user: {ex.Message}");
-            }
+            return Ok(new { message = "User banned successfully" });
         }
 
         [HttpPost("UnbanUser/{userId}")]
         public async Task<ActionResult> UnbanUser(int userId)
         {
-            try
-            {
-                var result = await _adminService.UnbanUserAsync(userId);
-                if (!result)
-                    return NotFound("User not found or unban failed");
+            var result = await _adminService.UnbanUserAsync(userId);
+            if (!result)
+                return NotFound("User not found or unban failed");
 
-                return Ok(new { message = "User unbanned successfully" });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest($"Error unbanning user: {ex.Message}");
-            }
+            return Ok(new { message = "User unbanned successfully" });
         }
 
         [HttpDelete("DeleteUser/{userId}")]
         public async Task<ActionResult> DeleteUser(int userId)
         {
-            try
-            {
-                var result = await _adminService.DeleteUserAsync(userId);
-                if (!result)
-                    return NotFound("User not found or deletion failed");
+            var result = await _adminService.DeleteUserAsync(userId);
+            if (!result)
+                return NotFound("User not found or deletion failed");
 
-                return Ok(new { message = "User deleted successfully" });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest($"Error deleting user: {ex.Message}");
-            }
+            return Ok(new { message = "User deleted successfully" });
         }
 
         [HttpGet("CheckUserBanStatus/{userId}")]
         public async Task<ActionResult> CheckUserBanStatus(int userId)
         {
-            try
-            {
-                var isBanned = await _adminService.IsUserBannedAsync(userId);
-                return Ok(new { userId, isBanned });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest($"Error checking ban status: {ex.Message}");
-            }
+            var isBanned = await _adminService.IsUserBannedAsync(userId);
+            return Ok(new { userId, isBanned });
         }
 
         [HttpPost("RefreshBanStatus")]
         public ActionResult RefreshBanStatus()
         {
+            _adminService.CheckAndUnbanExpiredUsers();
+            return Ok(new { message = "Ban status refreshed successfully" });
+        }
+
+        [HttpGet("UnconfirmedUsersCount")]
+        public async Task<IActionResult> GetUnconfirmedUsersCount()
+        {
             try
             {
-                _adminService.CheckAndUnbanExpiredUsers();
-                return Ok(new { message = "Ban status refreshed successfully" });
+                var result = await _userService.GetUnconfirmedUsersCountAsync();
+                return Ok(result);
             }
             catch (Exception ex)
             {
-                return BadRequest($"Error refreshing ban status: {ex.Message}");
+                return BadRequest($"Failed to get counts: {ex.Message}");
             }
         }
     }

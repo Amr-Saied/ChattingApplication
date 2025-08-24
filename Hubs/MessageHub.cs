@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using ChattingApplicationProject.Data;
 using Microsoft.AspNetCore.Authorization;
@@ -191,14 +192,24 @@ namespace ChattingApplicationProject.Hubs
                     return;
                 }
 
-                _logger.LogWarning(
-                    "⚠️ SendMessage called on Hub - this should use MessageController instead. Sender: {SenderId}, Recipient: {RecipientId}",
-                    senderId,
-                    recipientId
-                );
-
-                // This method is deprecated - MessageController handles message sending
-                // Keeping for backward compatibility but not implementing functionality
+                // Get the recipient's connection
+                var connectionId = GetUserConnection(recipientId);
+                if (connectionId != null)
+                {
+                    // Send message to recipient
+                    await Clients
+                        .Client(connectionId)
+                        .SendAsync(
+                            "ReceiveMessage",
+                            new
+                            {
+                                senderId = senderId,
+                                recipientId = recipientId,
+                                content = content,
+                                messageSent = DateTime.UtcNow
+                            }
+                        );
+                }
             }
             catch (Exception ex)
             {
@@ -349,8 +360,41 @@ namespace ChattingApplicationProject.Hubs
 
         private int GetCurrentUserId()
         {
-            var userIdClaim = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            // Try both claim types since JWT uses NameId but some systems expect NameIdentifier
+            var userIdClaim =
+                Context.User?.FindFirst(JwtRegisteredClaimNames.NameId)?.Value
+                ?? Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             return int.TryParse(userIdClaim, out int userId) ? userId : 0;
+        }
+
+        public async Task NotifyMessageDeleted(int messageId, int senderId, int recipientId)
+        {
+            try
+            {
+                // Notify both sender and recipient about message deletion
+                var senderConnection = GetUserConnection(senderId);
+                var recipientConnection = GetUserConnection(recipientId);
+
+                if (senderConnection != null)
+                {
+                    await Clients.Client(senderConnection).SendAsync("MessageDeleted", messageId);
+                }
+
+                if (recipientConnection != null)
+                {
+                    await Clients
+                        .Client(recipientConnection)
+                        .SendAsync("MessageDeleted", messageId);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Error notifying message deletion for message {MessageId}",
+                    messageId
+                );
+            }
         }
     }
 }

@@ -29,6 +29,12 @@ namespace ChattingApplicationProject.Helpers
                     dest => dest.UserName,
                     opt => opt.MapFrom(src => (src.Username ?? string.Empty).ToLower())
                 )
+                .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email))
+                .ForMember(dest => dest.DateOfBirth, opt => opt.MapFrom(src => src.DateOfBirth))
+                .ForMember(dest => dest.KnownAs, opt => opt.MapFrom(src => src.KnownAs))
+                .ForMember(dest => dest.Gender, opt => opt.MapFrom(src => src.Gender))
+                .ForMember(dest => dest.City, opt => opt.MapFrom(src => src.City))
+                .ForMember(dest => dest.Country, opt => opt.MapFrom(src => src.Country))
                 .ForMember(dest => dest.Created, opt => opt.MapFrom(src => DateTime.Now))
                 .ForMember(dest => dest.LastActive, opt => opt.MapFrom(src => DateTime.Now))
                 .ForMember(dest => dest.Role, opt => opt.MapFrom(src => "User"));

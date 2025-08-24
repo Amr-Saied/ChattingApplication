@@ -21,6 +21,10 @@ namespace ChattingApplicationProject.DTO
         public string? Username { get; set; }
 
         [Required]
+        [EmailAddress(ErrorMessage = "Please enter a valid email address")]
+        public string? Email { get; set; }
+
+        [Required]
         [StringLength(
             100,
             MinimumLength = 6,

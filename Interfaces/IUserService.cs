@@ -13,8 +13,9 @@ namespace ChattingApplicationProject.Interfaces
         Task<AppUser> AddUser(AppUser user);
         Task<IEnumerable<MemeberDTO>> GetUsersDTO();
         Task<MemeberDTO> GetUserByIdDTO(int id);
-        Task<MemeberDTO> GetUserByUsernameDTO(string username);
+        Task<AppUser> GetUserById(int id);
         Task<AppUser> GetUserByUsername(string username);
+        Task<MemeberDTO> GetUserByUsernameDTO(string username);
         Task<MemeberDTO> UpdateUserDTO(int id, MemeberDTO user);
         Task<bool> AddPhotoToGallery(int userId, PhotoDTO photo);
         Task<bool> DeletePhotoFromGallery(int userId, int photoId);
@@ -22,5 +23,9 @@ namespace ChattingApplicationProject.Interfaces
         Task<IEnumerable<MemeberDTO>> SearchUsersAsync(string searchTerm);
         Task<bool> UpdateUserLastActive(AppUser user);
         string GetLastActiveStatus(DateTime lastActive);
+        Task<AppUser?> GetUserByGoogleId(string? googleId);
+        Task<object> GetUnconfirmedUsersCountAsync();
+        Task<bool> UpdateUser(AppUser user);
+        Task<bool> UpdateUsername(string currentUsername, string newUsername);
     }
 }
